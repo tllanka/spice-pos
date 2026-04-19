@@ -934,6 +934,42 @@ function buildPzone(){
   /* Total අකුරු ප්‍රමාණය තරමක් කුඩා කර ඇත */
   .pz-big{font-size:${is80?14:11}px; font-weight:bold;} 
   .pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px;}
+  /* ලැප්ටොප් එකේ බටන් පෙනීමට checkout පැනලයේ උස සකස් කිරීම */
+.cko {
+  position: sticky;
+  top: 65px;
+  height: calc(100vh - 90px);
+  display: flex;
+  flex-direction: column;
+}
+.ilw { flex: 1; overflow-y: auto; }
+
+/* PWA INSTALL BANNER - තැඹිලි පාටින් */
+.pwa-bar {
+  background: linear-gradient(90deg, #d4701e, #a03c0a);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  border-bottom: 2px solid #5a1e04;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  font-weight: bold;
+}
+.pwa-bar.hide { display: none; }
+.pwa-ibtn {
+  background: #fff;
+  color: #a03c0a;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+}
 </style>
 <div class="pz-c">
   ${logoHtml}
@@ -1156,44 +1192,11 @@ function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.o
 function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 window.addEventListener('resize',rGrid);
-  /* PWA INSTALLATION */
-let defPr;
-window.addEventListener('beforeinstallprompt',(e)=>{ 
-  e.preventDefault(); 
-  defPr=e; 
-  document.getElementById('pwaBanner').classList.remove('hide');
-});
-  /* PWA INSTALL BANNER - තැඹිලි පාටින් */
-.pwa-bar {
-  background: linear-gradient(90deg, #d4701e, #a03c0a);
-  color: #fff;
-  font-size: 0.85rem;
-  padding: 10px 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-  border-bottom: 2px solid #5a1e04;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  font-weight: bold;
-}
-.pwa-bar.hide { display: none; }
-.pwa-ibtn {
-  background: #fff;
-  color: #a03c0a;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 800;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-  /* PWA INSTALL LOGIC */
+  window.addEventListener('resize',rGrid);
+
+/* ══ PWA INSTALL LOGIC ══ */
 let defPr;
 window.addEventListener('beforeinstallprompt', (e) => {
-  // බ්‍රවුසරය විසින් ඉබේම Prompt එක පෙන්වන එක නතර කර අපේ බැනරය පෙන්වීම
   e.preventDefault();
   defPr = e;
   const banner = document.getElementById('pwaBanner');
@@ -1202,7 +1205,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 function installPWA() {
   if (!defPr) return;
-  defPr.prompt(); // Install window එක පෙන්වීම
+  defPr.prompt();
   defPr.userChoice.then((choice) => {
     if (choice.outcome === 'accepted') {
       document.getElementById('pwaBanner').classList.add('hide');
@@ -1210,6 +1213,7 @@ function installPWA() {
     defPr = null;
   });
 }
+</script>
 </script>
 </body>
 </html>
