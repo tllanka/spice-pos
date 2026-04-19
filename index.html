@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="si">
 <head>
-  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#8b3a0f">
@@ -240,53 +239,7 @@ html,body{font-family:var(--F);background:var(--bg);color:var(--txt);min-height:
 @media print{body>*:not(#pzone){display:none!important}#pzone{display:block!important;position:fixed;inset:0;background:#fff;padding:8px}}
 /* Responsive */
 @media(max-width:860px){.pos{grid-template-columns:1fr}.cko{position:static;max-height:none}.adm{flex-direction:column}.asb{width:100%;display:flex;overflow-x:auto;padding:5px;gap:3px}.asl{display:none}.am{border-left:none;border-bottom:2.5px solid transparent;white-space:nowrap;padding:6px 10px;border-radius:8px;margin:0;font-size:.78rem}.am.on{border-bottom-color:var(--acc3);border-left-color:transparent}.fgg{grid-template-columns:1fr}.rcs{grid-template-columns:1fr}.ivmeta{grid-template-columns:1fr}.imc:first-child{border-right:none;border-bottom:1px solid var(--bdr)}.ivbtns-bot .btn{flex:1;justify-content:center}.con-grid{grid-template-columns:1fr}}
-@media(max-width: 640px) {
-  /* Header එකේ නම තිබෙන කොටස hide කිරීමට */
-  .hdr > div:first-child { display: none; }
-  
-  /* Icons ටික මැදට හෝ සම්පූර්ණ ඉඩ ගන්නා සේ සකස් කිරීමට */
-  .h-r { 
-    width: 100%; 
-    justify-content: space-between; 
-    gap: 10px;
-  }
-}
-  /* ලැප්ටොප් එකේ බටන් පෙනීමට සහ ලිස්ට් එකට පමණක් Scroll එකක් ලබා දීමට */
-.cko {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 100px);
-  position: sticky;
-  top: 70px;
-}
-.ilw { flex: 1; overflow-y: auto; }
-
-/* තැඹිලි පාට PWA ඉන්ස්ටෝල් බැනරය */
-.pwa-bar {
-  background: linear-gradient(90deg, #d4701e, #a03c0a);
-  color: #fff;
-  font-size: 0.85rem;
-  padding: 10px 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-  border-bottom: 2px solid #5a1e04;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  font-weight: bold;
-}
-.pwa-bar.hide { display: none; }
-.pwa-ibtn {
-  background: #fff;
-  color: #a03c0a;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 800;
-}
+@media(max-width:640px){.igrid{grid-template-columns:repeat(2,1fr)!important}.h-s{display:none}}
 </style>
 </head>
 <body>
@@ -738,7 +691,7 @@ const SR={
   'ශ':'sha','ෂ':'sha','ස':'sa','හ':'ha','ළ':'la','ෆ':'fa','ඟ':'nga','ඦ':'ncha',
   'ා':'a','ි':'i','ී':'ii','ු':'u','ූ':'uu','ෙ':'e','ේ':'ee','ො':'o','ෝ':'oo','ෞ':'au',
   'ං':'m','ඃ':'h','්':'','අ':'a','ආ':'aa','ඇ':'ae','ඉ':'i','ඊ':'ii','උ':'u','ඌ':'uu',
-  'එ':'e','ඒ':'ee','ඔ':'o','ඕ':'oo',' ':' ','.':'.','(': ' (', ')': ')', '/': '/'
+  'එ':'e','ඒ':'ee','ඔ':'o','ඕ':'oo',' ':' ','.':'.','(':' (',')':"),'/':"/"
 };
 function si2rom(s){if(!s)return'';let r='';for(const c of s)r+=SR[c]!==undefined?SR[c]:(/[\u0D80-\u0DFF]/.test(c)?'':c);return r;}
 
@@ -916,263 +869,166 @@ function buildSMSBody(){
   const sale=SALES[SALES.length-1];const gt=inv.reduce((s,l)=>s+l.tot,0);
   const sn=SHOP.eng||si2rom(SHOP.sin)||'Shop';
   const foot=si2rom(SHOP.foot)||'';
-  return `${sn}\nInv:${sale?.invNo||'?'} ${new Date().toLocaleDateString('en-GB')}\n`+
+  return`${sn}\nInv:${sale?.invNo||'?'} ${new Date().toLocaleDateString('en-GB')}\n`+
     inv.map(l=>`${l.item.eng||si2rom(l.item.sin)} ${l.w.toFixed(3)}kg Rs.${fmt(l.tot)}`).join('\n')+
     `\nTotal: Rs.${fmt(gt)}${foot?'\n'+foot:''}`;
 }
 function triggerSMSOpen(phone){
-  if(!phone) return;
-  
-  // නම්බර් එකේ තියෙන හිස්තැන් ඉවත් කිරීම
-  const ph = phone.replace(/\D/g,'');
-  const body = encodeURIComponent(buildSMSBody());
-  
-  // ඕනෑම ෆෝන් එකකට ගැළපෙන සාමාන්‍ය SMS ලින්ක් එක
-  const uri = `sms:${ph}?body=${body}`;
+  if(!phone)return;
+  const body=encodeURIComponent(buildSMSBody());
+  const ph=phone.replace(/\D/g,'');
+  const sim=CFG.sim||'auto';
+  const strip=document.getElementById('smsStrip');
 
-  try {
-    const a = document.createElement('a');
-    a.href = uri;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); }, 500);
+  let uri;
+  if(sim==='sim1'){
+    // Try Android dual-SIM intent via smsto: with subscription hint
+    uri=`intent://send?address=${ph}&body=${body}#Intent;scheme=smsto;package=com.android.mms;S.subscription_id=1;end`;
+  } else if(sim==='sim2'){
+    uri=`intent://send?address=${ph}&body=${body}#Intent;scheme=smsto;package=com.android.mms;S.subscription_id=2;end`;
+  } else {
+    uri=`sms:${ph}?body=${body}`;
+  }
 
-    const strip = document.getElementById('smsStrip');
-    if(strip) {
-      strip.textContent = '📱 SMS app opened → ' + phone;
-      strip.className = 'sms-strip warn';
-    }
-  } catch(e) {
-    toast('❌ SMS open failed', 'err');
+  try{
+    // Hidden link click — opens SMS app
+    const a=document.createElement('a');
+    a.href=uri;a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{try{document.body.removeChild(a);}catch(e){}},500);
+    strip.textContent='📱 SMS app opened → '+phone+' — Send button press කරන්න';
+    strip.className='sms-strip warn';
+  }catch(e){
+    strip.textContent='❌ SMS open failed';
+    strip.className='sms-strip warn';
   }
 }
 
 /* ══ PRINT ZONE — paper size aware, logo, Sinhala ══ */
 function buildPzone(){
-  const sale=SALES[SALES.length-1]; const invNo=sale?.invNo||'—';
+  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
   const ds=new Date(sale?.date||Date.now()).toLocaleDateString('en-GB');
-  const cust=document.getElementById('cust').value.trim(); const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const is80=(CFG.paper||'58')==='80';
+  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
+  const paper=CFG.paper||'58';
+  const is80=paper==='80';
+  // Names: 80mm try Sinhala, 58mm use English/Roman
   const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
   const foot=is80?(SHOP.foot||'ස්තූතියි!'):(si2rom(SHOP.foot)||'Thank You!');
+  const pw=is80?'80mm':'58mm';
 
-  // ලෝගෝ එක මැදට සහ ලොකුවට පෙනීමට HTML
-  const logoHtml=SHOP.logo?`<div style="text-align:center; width:100%; margin-bottom:10px;"><img src="${SHOP.logo}" style="max-height:100px; max-width:180px; display:inline-block; filter:grayscale(1) contrast(1.4);"></div>`:'';
+  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?55:40}px;max-width:${is80?140:100}px;display:block;margin:0 auto 5px;filter:grayscale(1) contrast(1.4)">`:'';
 
   document.getElementById('pzone').innerHTML=`
 <style>
-  #pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0; padding:4px; color:#000;}
-  .pz-c{text-align:center;} 
-  .pz-b{font-weight:bold;} 
-  .pz-d{border-top:1px dashed #000; margin:5px 0;}
-  .pz-r{display:flex; justify-content:space-between;}
-  /* Total අකුරු ප්‍රමාණය තරමක් කුඩා කර ඇත */
-  .pz-big{font-size:${is80?14:11}px; font-weight:bold;} 
-  .pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px;}
-  /* ලැප්ටොප් එකේ බටන් පෙනීමට checkout පැනලයේ උස සකස් කිරීම */
-.cko {
-  position: sticky;
-  top: 65px;
-  height: calc(100vh - 90px);
-  display: flex;
-  flex-direction: column;
-}
-.ilw { flex: 1; overflow-y: auto; }
-
-/* PWA INSTALL BANNER - තැඹිලි පාටින් */
-.pwa-bar {
-  background: linear-gradient(90deg, #d4701e, #a03c0a);
-  color: #fff;
-  font-size: 0.85rem;
-  padding: 10px 15px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: space-between;
-  border-bottom: 2px solid #5a1e04;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  font-weight: bold;
-}
-.pwa-bar.hide { display: none; }
-.pwa-ibtn {
-  background: #fff;
-  color: #a03c0a;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 800;
-}
+#pzone{font-family:'Courier New',monospace;font-size:${is80?12:10}px;width:${is80?72:50}mm;margin:0;padding:4px}
+.pz-c{text-align:center}.pz-b{font-weight:bold}.pz-d{border-top:1px dashed #333;margin:4px 0}
+.pz-r{display:flex;justify-content:space-between}.pz-big{font-size:${is80?16:13}px;font-weight:bold}
+.pz-f{text-align:center;margin-top:6px;font-size:${is80?11:9}px}
 </style>
-<div class="pz-c">
-  ${logoHtml}
-  <div class="pz-b" style="font-size:${is80?14:12}px;">${shopN}</div>
+<div class="pz-c">${logoHtml}<div class="pz-b" style="font-size:${is80?14:12}px">${shopN}</div>
   ${SHOP.eng&&is80?`<div>${SHOP.eng}</div>`:''}
   ${SHOP.addr?`<div>${SHOP.addr}</div>`:''}
-  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}
-</div>
+  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}</div>
 <div class="pz-d"></div>
 <div class="pz-r"><span>Invoice:</span><span>${invNo}</span></div>
 <div class="pz-r"><span>Date:</span><span>${ds}</span></div>
 ${cust&&cust!=='Anonymous'?`<div class="pz-r"><span>Customer:</span><span>${cust}</span></div>`:''}
+${curCustPh?`<div class="pz-r"><span>Phone:</span><span>${curCustPh}</span></div>`:''}
 <div class="pz-d"></div>
-${inv.map(l=>{
-  const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):(l.item.eng||si2rom(l.item.sin));
-  return `<div class="pz-b">${nm}</div><div class="pz-r"><span>${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`;
-}).join('')}
+${inv.map(l=>{const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):( l.item.eng||si2rom(l.item.sin));return`<div class="pz-b">${nm}</div><div class="pz-r"><span>${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`}).join('')}
 <div class="pz-d"></div>
 <div class="pz-r pz-big"><span>Total</span><span>Rs.${fmt(gt)}</span></div>
 <div class="pz-d"></div>
 <div class="pz-f">${foot}</div>`;
 }
 
-/* ══ ESC/POS DATA — 58mm සහ 80mm යන දෙකටම ගැලපෙන ලෙස ══ */
+/* ══ ESC/POS DATA — paper size + logo ══ */
 function buildPrintData(){
-  const E=0x1B, G=0x1D;
-  const sale=SALES[SALES.length-1];
-  const invNo=sale?.invNo||'—';
-  const cust=document.getElementById('cust').value.trim();
-  const gt=inv.reduce((s,l)=>s+l.tot,0);
-  
-  // පේපර් සයිස් එක අනුව තීරණය කිරීම
-  const is80 = (CFG.paper === '80');
-  
-  // 80mm නම් සිංහල, 58mm නම් රෝම අකුරු
-  const shopN = is80 ? (SHOP.sin || 'Shop') : (si2rom(SHOP.sin) || 'Shop');
-  const foot = is80 ? (SHOP.foot || 'ස්තූතියි!') : (si2rom(SHOP.foot) || 'Thank You!');
+  const E=0x1B,G=0x1D;
+  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
+  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
+  const is80=(CFG.paper||'58')==='80';
+  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
+  const foot=is80?(SHOP.foot||'ස්තූතියි!'):(si2rom(SHOP.foot)||'Thank You!');
 
-  const enc = new TextEncoder(); // UTF-8 encoding භාවිතා කරයි
-  const chunks = [
-    new Uint8Array([E, 0x40]),                          // Reset printer
-    
-    // 1. Logo එක මැදට ගැනීම
+  // UTF-8 code page for 80mm (if printer supports)
+  const cpSet=is80?[E,0x74,0x00]:[E,0x74,0x00]; // PC437
+
+  const enc=new TextEncoder();
+  const chunks=[
+    new Uint8Array([E,0x40]),                          // init
+    new Uint8Array(cpSet),                              // code page
+    // Logo bitmap (simplified — if SHOP.logo exists, attempt GS v 0)
     ...logoEscPos(),
-    
-    new Uint8Array([E, 0x61, 1]),                         // Center align
-    // 2. Shop Info
-    enc.encode(shopN + '\n'),
-    SHOP.tel ? enc.encode('Tel: ' + SHOP.tel + '\n') : null,
-    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
-    
-    new Uint8Array([E, 0x61, 0]),                         // Left align
-    enc.encode('Inv: ' + invNo + '  ' + new Date().toLocaleDateString('en-GB') + '\n'),
-    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + (is80 ? cust : si2rom(cust)) + '\n') : null,
-    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
-    
-    // 3. Items
-    ...inv.map(l => {
-      const nm = is80 ? l.item.sin : si2rom(l.item.sin);
-      // 80mm දී සියල්ල එක පේළියක තැබීමට උත්සාහ කරයි, 58mm දී පේළි දෙකක් භාවිතා කරයි
-      if(is80) {
-        return enc.encode(`${nm.padEnd(20)} ${l.w.toFixed(2)}kg x ${l.item.price.toFixed(0)} = ${l.tot.toFixed(2)}\n`);
-      } else {
-        return enc.encode(`${nm}\n ${l.w.toFixed(2)}kg x ${l.item.price} = ${l.tot.toFixed(2)}\n`);
-      }
+    new Uint8Array([E,0x61,1]),                         // center
+    enc.encode(shopN+'\n'),
+    SHOP.eng&&is80?enc.encode(SHOP.eng+'\n'):null,
+    SHOP.addr?enc.encode(SHOP.addr+'\n'):null,
+    SHOP.tel?enc.encode('Tel:'+SHOP.tel+'\n'):null,
+    enc.encode('================================\n'),
+    new Uint8Array([E,0x61,0]),
+    enc.encode('Invoice:'+invNo+' '+new Date().toLocaleDateString('en-GB')+'\n'),
+    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+(curCustPh?' '+curCustPh:'')+'\n'):null,
+    enc.encode('--------------------------------\n'),
+    ...inv.map(l=>{
+      const nm=is80?l.item.sin:(l.item.eng||si2rom(l.item.sin));
+      return enc.encode(`${nm}\n  ${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\n`);
     }),
-    
-    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
-    
-    // 4. Total (තද අකුරු - Bold)
-    new Uint8Array([E, 0x21, 0x08]),                      // Bold mode ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
-    new Uint8Array([E, 0x21, 0x00]),                      // Bold mode OFF
-    
-    enc.encode('\n'),
-    new Uint8Array([E, 0x61, 1]),                         // Center align
-    enc.encode(foot + '\n\n\n'),
-    new Uint8Array([G, 0x56, 0x41, 0x10]),                 // Paper cut
+    enc.encode('================================\n'),
+    new Uint8Array([G,0x21,0x11]),
+    enc.encode('Total: Rs.'+fmt(gt)+'\n'),
+    new Uint8Array([G,0x21,0]),enc.encode('\n'),
+    new Uint8Array([E,0x61,1]),
+    enc.encode(foot+'\n\n\n'),
+    new Uint8Array([G,0x56,0x41,0x10]),
   ];
   return chunks.filter(Boolean);
 }
 
 function logoEscPos(){
-  if(!SHOP.logo) return [];
-  try {
-    const is80 = (CFG.paper === '80');
-    const maxW = is80 ? 330 : 160; // ඉඩ ප්‍රමාණයට අනුව ලෝගෝ එක පාලනය කරයි
-    
-    const cv = document.createElement('canvas');
-    const img = document.getElementById('sbLogoImg'); // දැනටමත් පේජ් එකේ තියෙන රූපය ගනී
-    
-    if(!img || img.src === "") return [];
-
-    const aspect = img.naturalWidth / img.naturalHeight || 1;
-    cv.width = Math.min(maxW, Math.round(100 * aspect));
-    cv.height = Math.min(100, Math.round(maxW / aspect));
-    
-    const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    
-    const pw = Math.ceil(cv.width / 8); 
-    const ph = cv.height;
-    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
-    const bits = [];
-    for(let y = 0; y < ph; y++){
-      for(let bx = 0; bx < pw; bx++){
-        let byte = 0;
-        for(let b = 0; b < 8; b++){
-          const x = bx * 8 + b;
-          if(x < cv.width){
-            const i = (y * cv.width + x) * 4;
-            const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
-            if(gray < 128) byte |= (0x80 >> b);
+  // Convert logo to 1-bit bitmap for ESC/POS
+  // Only attempt if logo exists and canvas available
+  if(!SHOP.logo)return[];
+  try{
+    const img=new Image();img.src=SHOP.logo;
+    const is80=(CFG.paper||'58')==='80';
+    const maxW=is80?384:240;const maxH=80;
+    const cv=document.createElement('canvas');
+    const aspect=img.naturalWidth/img.naturalHeight||1;
+    cv.width=Math.min(maxW,Math.round(maxH*aspect));
+    cv.height=Math.min(maxH,Math.round(maxW/aspect));
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img,0,0,cv.width,cv.height);
+    const pw=Math.ceil(cv.width/8);const ph=cv.height;
+    const data=ctx.getImageData(0,0,cv.width,cv.height).data;
+    const bits=[];
+    for(let y=0;y<ph;y++){
+      for(let bx=0;bx<pw;bx++){
+        let byte=0;
+        for(let b=0;b<8;b++){
+          const x=bx*8+b;
+          if(x<cv.width){
+            const i=(y*cv.width+x)*4;
+            const gray=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
+            if(gray<128)byte|=(0x80>>b);
           }
         }
         bits.push(byte);
       }
     }
-    const cmd = new Uint8Array(8 + bits.length);
-    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
-    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
-    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
-    bits.forEach((b, i) => cmd[8 + i] = b);
-    
-    return [new Uint8Array([0x1B, 0x61, 0x01]), cmd, new Uint8Array([0x0A])];
-  } catch(e) { 
-    console.error('Logo logic error:', e);
-    return []; 
-  }
-}
-  /* ══ PRINT EXECUTION ══ */
-async function actualPrint() {
-  try {
-    buildPzone(); 
-    if (pDev && pDev.gatt?.connected && pChar) {
-      toast('🔵 Bluetooth හරහා ප්‍රින්ට් වෙනවා...', 'ok');
-      await btPrint();
-    } 
-    else if (pPort && pWriter) {
-      toast('🟣 USB හරහා ප්‍රින්ට් වෙනවා...', 'ok');
-      const chunks = buildPrintData();
-      for (const c of chunks) {
-        await pWriter.write(c);
-        await new Promise(r => setTimeout(r, 30));
-      }
-    } 
-    else {
-      window.print();
-    }
-  } catch (e) {
-    console.error(e);
-    toast('ප්‍රින්ට් කිරීමේදී දෝෂයක්: ' + e.message, 'err');
-  }
+    const cmd=new Uint8Array(8+bits.length);
+    // GS v 0: [1D 76 30 00 pw_l pw_h ph_l ph_h ...data]
+    cmd[0]=0x1D;cmd[1]=0x76;cmd[2]=0x30;cmd[3]=0x00;
+    cmd[4]=pw&0xff;cmd[5]=(pw>>8)&0xff;
+    cmd[6]=ph&0xff;cmd[7]=(ph>>8)&0xff;
+    bits.forEach((b,i)=>cmd[8+i]=b);
+    return[cmd,new Uint8Array([0x0A])]; // print + LF
+  }catch(e){return[];}
 }
 
-async function btPrint() {
-  if (!pChar) return;
-  const chunks = buildPrintData();
-  for (const c of chunks) {
-    try {
-      if (pChar.properties.writeWithoutResponse) await pChar.writeValueWithoutResponse(c);
-      else await pChar.writeValue(c);
-    } catch (e) { console.log('Print Error:', e); }
-    await new Promise(r => setTimeout(r, 60));
-  }
-}
+async function btPrint(){const chunks=buildPrintData();for(const c of chunks){try{if(pChar.properties.writeWithoutResponse)await pChar.writeValueWithoutResponse(c);else await pChar.writeValue(c);}catch(e){}await new Promise(r=>setTimeout(r,40));}}
+async function serialPrint(){const chunks=buildPrintData();for(const c of chunks){try{await pWriter.write(c);}catch(e){}await new Promise(r=>setTimeout(r,20));}}
 
 /* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>setScBT(false));const uu=['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455'];let svc=null;for(const u of uu){try{svc=await sv.getPrimaryService(u);break;}catch(e){}}if(!svc){const ss=await sv.getPrimaryServices();svc=ss[0];}const cs=await svc.getCharacteristics();sChar=cs.find(c=>c.properties.notify)||cs[0];if(sChar?.properties.notify){await sChar.startNotifications();sChar.addEventListener('characteristicvaluechanged',onScData);}setScBT(true);toast('✅ Scale BT: '+sDev.name,'ok');}catch(e){toast('❌ '+e.message,'err');}}
@@ -1195,28 +1051,90 @@ async function conPrintSerial(){if(!navigator.serial){toast('❌ Chrome Web Seri
 function setPrSerial(on){['pdotS','pdotSA'].forEach(id=>{const e=document.getElementById(id);if(e)e.className='bd'+(on?' on':'');});const s=document.getElementById('pstatSA');if(s)s.textContent=on?'✅ USB Connected':'නොවිණි';}
 async function disPrintSerial(){try{pWriter?.releaseLock();await pPort?.close();}catch(e){}pPort=null;pWriter=null;setPrSerial(false);}
 
-/* මෙතැන් සිට පහළට ඇති අනෙකුත් Functions (Reports, Backup, PWA) ඔබේ පැරණි code එකේ ඇති පරිදිම පවත්වා ගන්න... */
+/* ══ REPORTS ══ */
+function updRep(){const td=new Date().toDateString(),tm=new Date().getMonth()+'-'+new Date().getFullYear();const tds=SALES.filter(s=>new Date(s.date).toDateString()===td);const tms=SALES.filter(s=>{const d=new Date(s.date);return(d.getMonth()+'-'+d.getFullYear())===tm;});document.getElementById('tdAmt').textContent='රු. '+fmt(tds.reduce((s,x)=>s+x.gt,0));document.getElementById('tdCnt').textContent='ගනු '+tds.length;document.getElementById('mnAmt').textContent='රු. '+fmt(tms.reduce((s,x)=>s+x.gt,0));document.getElementById('mnCnt').textContent='ගනු '+tms.length;}
+function rSalTbl(){const tb=document.getElementById('saltb');if(!SALES.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:22px;color:var(--txt2)">ගනු නොමැත</td></tr>';return;}tb.innerHTML=[...SALES].reverse().slice(0,60).map((s,i)=>`<tr><td>${SALES.length-i}</td><td style="font-family:var(--M);font-size:.72rem">${s.invNo||'—'}</td><td style="font-size:.7rem">${new Date(s.date).toLocaleString('si-LK')}</td><td>${s.cust}</td><td>${s.items.length}</td><td><span class="bdg bdg-g">රු.${fmt(s.gt)}</span></td><td><button class="btn b-r b-sm" onclick="delSal(${s.id})">🗑️</button></td></tr>`).join('');}
+function delSal(id){if(!confirm('ඉවත්?'))return;SALES=SALES.filter(s=>s.id!==id);try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️','ok');}
+function clrSalesAuth(){document.getElementById('clrPwM').style.display='flex';document.getElementById('clrPw').value='';document.getElementById('clrPwErr').textContent='';setTimeout(()=>document.getElementById('clrPw').focus(),80);}
+function doClrSales(){if(document.getElementById('clrPw').value!==PW){document.getElementById('clrPwErr').textContent='❌ Wrong!';document.getElementById('clrPw').value='';return;}document.getElementById('clrPwM').style.display='none';if(!confirm('Sales data සියල්ල delete? ⚠️'))return;SALES=[];try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️ Cleared','ok');}
 
-/* ══ PWA INSTALL LOGIC ══ */
-let defPr;
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  defPr = e;
-  const banner = document.getElementById('pwaBanner');
-  if (banner) banner.classList.remove('hide');
-});
-
-function installPWA() {
-  if (!defPr) return;
-  defPr.prompt();
-  defPr.userChoice.then((choice) => {
-    if (choice.outcome === 'accepted') {
-      const banner = document.getElementById('pwaBanner');
-      if (banner) banner.classList.add('hide');
-    }
-    defPr = null;
-  });
+/* ══ XLSX (SpreadsheetML saved as .xlsx) ══ */
+const HCLR='8B3A0F',ECLR='FFF8F0',OCLR='FFFFFF',GCLR='1E5E3C',TCLR='FFE0C8';
+function xlCell(v,type,style){return`<Cell${style?` ss:StyleID="${style}"`:''}><Data ss:Type="${type}">${String(v===null||v===undefined?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</Data></Cell>`;}
+function xlRow(cells,h){return`<Row${h?` ss:Height="${h}"`:''}>${cells.join('')}</Row>`;}
+function buildXLSX(arr,sn){
+  const styles=`<Styles>
+<Style ss:ID="H"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="10"/><Interior ss:Color="#${HCLR}" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#5A1E04"/></Borders></Style>
+<Style ss:ID="E"><Interior ss:Color="#${ECLR}" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
+<Style ss:ID="O"><Interior ss:Color="#${OCLR}" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
+<Style ss:ID="EG"><Interior ss:Color="#${ECLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${GCLR}" ss:Size="9"/><Alignment ss:Horizontal="Right"/></Style>
+<Style ss:ID="OG"><Interior ss:Color="#${OCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${GCLR}" ss:Size="9"/><Alignment ss:Horizontal="Right"/></Style>
+<Style ss:ID="T"><Interior ss:Color="#${TCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${HCLR}" ss:Size="11"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#${HCLR}"/></Borders></Style>
+<Style ss:ID="TL"><Interior ss:Color="#${TCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Size="11"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#${HCLR}"/></Borders></Style>
+<Style ss:ID="S"><Interior ss:Color="#F2ECE0" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Size="9" ss:Color="#7A6545"/></Style>
+<Style ss:ID="SV"><Interior ss:Color="#F2ECE0" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
+</Styles>`;
+  const hdr=['#','Invoice No','දිනය','ගනු','Phone','Items','Total (රු.)'];
+  const hdrCols=[4,14,20,18,14,8,14];
+  const now=new Date();const total=arr.reduce((s,x)=>s+x.gt,0);
+  const smry=[
+    xlRow([xlCell('',null,'H'),xlCell('',null,'H'),xlCell('',null,'H')]),
+    xlRow([xlCell('කඩ නම','String','S'),xlCell(SHOP.sin||'','String','SV')]),
+    xlRow([xlCell('Shop','String','S'),xlCell(SHOP.eng||'','String','SV')]),
+    xlRow([xlCell('Address','String','S'),xlCell(SHOP.addr||'','String','SV')]),
+    xlRow([xlCell('Phone','String','S'),xlCell(SHOP.tel||'','String','SV')]),
+    xlRow([xlCell('Version','String','S'),xlCell('v'+APP_VER,'String','SV')]),
+    xlRow([xlCell('Export Date','String','S'),xlCell(now.toLocaleString('si-LK'),'String','SV')]),
+    xlRow([xlCell('Total Records','String','S'),xlCell(arr.length,'Number','SV')]),
+    xlRow([xlCell('Grand Total (රු.)','String','TL'),xlCell(total,'Number','T')]),
+  ];
+  const dataRows=[xlRow(hdr.map(h=>xlCell(h,'String','H')),18)];
+  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items.length,'Number',e),xlCell(s.gt,'Number',g)],14));});
+  dataRows.push(xlRow([xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('TOTAL','String','TL'),xlCell(total,'Number','T')]));
+  const itemHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
+  const itemRows=[xlRow(itemHdr.map(h=>xlCell(h,'String','H')),18)];
+  let ii=0;arr.forEach(s=>s.items.forEach(it=>{const e=ii%2===0?'E':'O';const g=ii%2===0?'EG':'OG';itemRows.push(xlRow([xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleDateString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(it.name,'String',e),xlCell(it.eng||si2rom(it.name)||'','String',e),xlCell(it.w,'Number',e),xlCell(it.price,'Number',e),xlCell(it.tot,'Number',g)],13));ii++;}));
+  const cw=ws=>ws.map(w=>`<Column ss:Width="${w}"/>`).join('');
+  return`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${styles}<Worksheet ss:Name="${sn}"><Table>${cw(hdrCols)}${dataRows.join('')}</Table></Worksheet><Worksheet ss:Name="Item Details"><Table>${cw([14,16,18,20,16,10,12,13])}${itemRows.join('')}</Table></Worksheet><Worksheet ss:Name="Summary"><Table>${cw([18,28])}${smry.join('')}</Table></Worksheet></Workbook>`;
 }
+function dlXLSX(xml,fn){const blob=new Blob(['\uFEFF'+xml],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn+'.xlsx';a.click();URL.revokeObjectURL(a.href);toast('✅ XLSX saved','ok');}
+function exDay(){const td=new Date().toDateString(),d=SALES.filter(s=>new Date(s.date).toDateString()===td);if(!d.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(d,'Daily'),'Daily_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));}
+function exMonth(){const m=new Date().getMonth()+'-'+new Date().getFullYear();const d=SALES.filter(s=>{const dt=new Date(s.date);return(dt.getMonth()+'-'+dt.getFullYear())===m;});if(!d.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(d,'Monthly'),'Monthly_'+new Date().toLocaleString('en',{month:'long'})+'_'+new Date().getFullYear());}
+function exAll(){if(!SALES.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(SALES,'All Sales'),'AllSales_'+Date.now());}
+
+/* ══ BACKUP — IndexedDB persist ══ */
+async function restoreBackupHandle(){
+  if(!CFG.autoBackup)return;
+  try{
+    const h=await idbGet('bkH');
+    if(h&&h.queryPermission){const p=await h.queryPermission({mode:'readwrite'});if(p==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File remembered: '+h.name;return;}const r=await h.requestPermission({mode:'readwrite'});if(r==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;return;}}
+    const dh=await idbGet('bkD');
+    if(dh&&dh.queryPermission){const p=await dh.queryPermission({mode:'readwrite'});if(p==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}const r=await dh.requestPermission({mode:'readwrite'});if(r==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}}
+  }catch(e){console.log('Handle restore:',e);}
+}
+function updBkBar(){const dot=document.getElementById('bkDot');const txt=document.getElementById('bkTxt');if(!bkupHandle&&!bkupDir&&!CFG.autoBackup){dot.className='bk-dot';txt.textContent='Backup: Setup නොවිණි';}else if(bkupHandle||bkupDir){dot.className='bk-dot ok';txt.textContent='Auto Backup: ✅ Ready';}else{dot.className='bk-dot';txt.textContent='Auto Backup: On (Folder නොමැත)';}}
+async function setupBkupFolder(){
+  if(window.showSaveFilePicker){
+    try{const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');const h=await window.showSaveFilePicker({suggestedName:sn+'_backup.json',types:[{description:'JSON',accept:{'application/json':['.json']}}],startIn:'downloads'});bkupHandle=h;await idbPut('bkH',h);updBkBar();toast('✅ Backup file set','ok');document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;await doWriteBackup();}catch(e){if(e.name!=='AbortError')toast('❌ '+e.message,'err');}
+  } else if(window.showDirectoryPicker){
+    try{let dir=await window.showDirectoryPicker({mode:'readwrite',startIn:'downloads'});const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');try{dir=await dir.getDirectoryHandle(sn,{create:true});}catch(e){}bkupDir=dir;await idbPut('bkD',dir);updBkBar();toast('✅ Folder set','ok');document.getElementById('bkFolderStatus').textContent='✅ Folder set';await doWriteBackup();}catch(e){toast('❌ '+e.message,'err');}
+  } else{toast('⚠️ Manual backup use කරන්න','err');}
+}
+async function doWriteBackup(){
+  const json=getAllDataJSON();
+  if(bkupHandle){try{const w=await bkupHandle.createWritable();await w.write(json);await w.close();setBkBar('ok','✅ Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Bkup:',e);}}
+  else if(bkupDir){try{const fh=await bkupDir.getFileHandle('pos_backup.json',{create:true});const w=await fh.createWritable();await w.write(json);await w.close();try{const dd=await bkupDir.getDirectoryHandle('daily',{create:true});const df=await dd.getFileHandle('bk_'+new Date().toISOString().slice(0,10)+'.json',{create:true});const dw=await df.createWritable();await dw.write(json);await dw.close();}catch(e){}setBkBar('ok','✅ Auto Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Dir bkup:',e);}}
+}
+function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s==='ok'?' ok':s==='saving'?' saving':'');document.getElementById('bkTxt').textContent=m;}
+function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
+function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
+function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
+function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
+
+/* ══ UTILS ══ */
+function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
+let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
+window.addEventListener('resize',rGrid);
 </script>
 </body>
 </html>
