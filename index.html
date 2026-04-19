@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#8b3a0f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">F
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <title id="PT">POS</title>
@@ -913,36 +913,43 @@ function triggerSMSOpen(phone){
 
 /* ══ PRINT ZONE — paper size aware, logo, Sinhala ══ */
 function buildPzone(){
-  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
+  const sale=SALES[SALES.length-1]; const invNo=sale?.invNo||'—';
   const ds=new Date(sale?.date||Date.now()).toLocaleDateString('en-GB');
-  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const paper=CFG.paper||'58';
-  const is80=paper==='80';
-  // Names: 80mm try Sinhala, 58mm use English/Roman
+  const cust=document.getElementById('cust').value.trim(); const gt=inv.reduce((s,l)=>s+l.tot,0);
+  const is80=(CFG.paper||'58')==='80';
   const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
   const foot=is80?(SHOP.foot||'ස්තූතියි!'):(si2rom(SHOP.foot)||'Thank You!');
-  const pw=is80?'80mm':'58mm';
 
-  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?55:40}px;max-width:${is80?140:100}px;display:block;margin:0 auto 5px;filter:grayscale(1) contrast(1.4)">`:'';
+  // ලෝගෝ එක මැදට සහ ලොකුවට පෙනීමට HTML
+  const logoHtml=SHOP.logo?`<div style="text-align:center; width:100%; margin-bottom:10px;"><img src="${SHOP.logo}" style="max-height:100px; max-width:180px; display:inline-block; filter:grayscale(1) contrast(1.4);"></div>`:'';
 
   document.getElementById('pzone').innerHTML=`
 <style>
-#pzone{font-family:'Courier New',monospace;font-size:${is80?12:10}px;width:${is80?72:50}mm;margin:0;padding:4px}
-.pz-c{text-align:center}.pz-b{font-weight:bold}.pz-d{border-top:1px dashed #333;margin:4px 0}
-.pz-r{display:flex;justify-content:space-between}.pz-big{font-size:${is80?16:13}px;font-weight:bold}
-.pz-f{text-align:center;margin-top:6px;font-size:${is80?11:9}px}
+  #pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0; padding:4px; color:#000;}
+  .pz-c{text-align:center;} 
+  .pz-b{font-weight:bold;} 
+  .pz-d{border-top:1px dashed #000; margin:5px 0;}
+  .pz-r{display:flex; justify-content:space-between;}
+  /* Total අකුරු ප්‍රමාණය තරමක් කුඩා කර ඇත */
+  .pz-big{font-size:${is80?14:11}px; font-weight:bold;} 
+  .pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px;}
 </style>
-<div class="pz-c">${logoHtml}<div class="pz-b" style="font-size:${is80?14:12}px">${shopN}</div>
+<div class="pz-c">
+  ${logoHtml}
+  <div class="pz-b" style="font-size:${is80?14:12}px;">${shopN}</div>
   ${SHOP.eng&&is80?`<div>${SHOP.eng}</div>`:''}
   ${SHOP.addr?`<div>${SHOP.addr}</div>`:''}
-  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}</div>
+  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}
+</div>
 <div class="pz-d"></div>
 <div class="pz-r"><span>Invoice:</span><span>${invNo}</span></div>
 <div class="pz-r"><span>Date:</span><span>${ds}</span></div>
 ${cust&&cust!=='Anonymous'?`<div class="pz-r"><span>Customer:</span><span>${cust}</span></div>`:''}
-${curCustPh?`<div class="pz-r"><span>Phone:</span><span>${curCustPh}</span></div>`:''}
 <div class="pz-d"></div>
-${inv.map(l=>{const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):( l.item.eng||si2rom(l.item.sin));return`<div class="pz-b">${nm}</div><div class="pz-r"><span>${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`}).join('')}
+${inv.map(l=>{
+  const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):(l.item.eng||si2rom(l.item.sin));
+  return `<div class="pz-b">${nm}</div><div class="pz-r"><span>${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`;
+}).join('')}
 <div class="pz-d"></div>
 <div class="pz-r pz-big"><span>Total</span><span>Rs.${fmt(gt)}</span></div>
 <div class="pz-d"></div>
@@ -1065,50 +1072,56 @@ function delSal(id){if(!confirm('ඉවත්?'))return;SALES=SALES.filter(s=>s.
 function clrSalesAuth(){document.getElementById('clrPwM').style.display='flex';document.getElementById('clrPw').value='';document.getElementById('clrPwErr').textContent='';setTimeout(()=>document.getElementById('clrPw').focus(),80);}
 function doClrSales(){if(document.getElementById('clrPw').value!==PW){document.getElementById('clrPwErr').textContent='❌ Wrong!';document.getElementById('clrPw').value='';return;}document.getElementById('clrPwM').style.display='none';if(!confirm('Sales data සියල්ල delete? ⚠️'))return;SALES=[];try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️ Cleared','ok');}
 
-/* ══ XLSX (SpreadsheetML saved as .xlsx) ══ */
-const HCLR='8B3A0F',ECLR='FFF8F0',OCLR='FFFFFF',GCLR='1E5E3C',TCLR='FFE0C8';
-function xlCell(v,type,style){return`<Cell${style?` ss:StyleID="${style}"`:''}><Data ss:Type="${type}">${String(v===null||v===undefined?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</Data></Cell>`;}
-function xlRow(cells,h){return`<Row${h?` ss:Height="${h}"`:''}>${cells.join('')}</Row>`;}
-function buildXLSX(arr,sn){
-  const styles=`<Styles>
-<Style ss:ID="H"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF" ss:Size="10"/><Interior ss:Color="#${HCLR}" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#5A1E04"/></Borders></Style>
-<Style ss:ID="E"><Interior ss:Color="#${ECLR}" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
-<Style ss:ID="O"><Interior ss:Color="#${OCLR}" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
-<Style ss:ID="EG"><Interior ss:Color="#${ECLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${GCLR}" ss:Size="9"/><Alignment ss:Horizontal="Right"/></Style>
-<Style ss:ID="OG"><Interior ss:Color="#${OCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${GCLR}" ss:Size="9"/><Alignment ss:Horizontal="Right"/></Style>
-<Style ss:ID="T"><Interior ss:Color="#${TCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Color="#${HCLR}" ss:Size="11"/><Alignment ss:Horizontal="Right"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#${HCLR}"/></Borders></Style>
-<Style ss:ID="TL"><Interior ss:Color="#${TCLR}" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Size="11"/><Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#${HCLR}"/></Borders></Style>
-<Style ss:ID="S"><Interior ss:Color="#F2ECE0" ss:Pattern="Solid"/><Font ss:Bold="1" ss:Size="9" ss:Color="#7A6545"/></Style>
-<Style ss:ID="SV"><Interior ss:Color="#F2ECE0" ss:Pattern="Solid"/><Font ss:Size="9"/></Style>
-</Styles>`;
-  const hdr=['#','Invoice No','දිනය','ගනු','Phone','Items','Total (රු.)'];
-  const hdrCols=[4,14,20,18,14,8,14];
-  const now=new Date();const total=arr.reduce((s,x)=>s+x.gt,0);
-  const smry=[
-    xlRow([xlCell('',null,'H'),xlCell('',null,'H'),xlCell('',null,'H')]),
-    xlRow([xlCell('කඩ නම','String','S'),xlCell(SHOP.sin||'','String','SV')]),
-    xlRow([xlCell('Shop','String','S'),xlCell(SHOP.eng||'','String','SV')]),
-    xlRow([xlCell('Address','String','S'),xlCell(SHOP.addr||'','String','SV')]),
-    xlRow([xlCell('Phone','String','S'),xlCell(SHOP.tel||'','String','SV')]),
-    xlRow([xlCell('Version','String','S'),xlCell('v'+APP_VER,'String','SV')]),
-    xlRow([xlCell('Export Date','String','S'),xlCell(now.toLocaleString('si-LK'),'String','SV')]),
-    xlRow([xlCell('Total Records','String','S'),xlCell(arr.length,'Number','SV')]),
-    xlRow([xlCell('Grand Total (රු.)','String','TL'),xlCell(total,'Number','T')]),
-  ];
-  const dataRows=[xlRow(hdr.map(h=>xlCell(h,'String','H')),18)];
-  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items.length,'Number',e),xlCell(s.gt,'Number',g)],14));});
-  dataRows.push(xlRow([xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('TOTAL','String','TL'),xlCell(total,'Number','T')]));
-  const itemHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
-  const itemRows=[xlRow(itemHdr.map(h=>xlCell(h,'String','H')),18)];
-  let ii=0;arr.forEach(s=>s.items.forEach(it=>{const e=ii%2===0?'E':'O';const g=ii%2===0?'EG':'OG';itemRows.push(xlRow([xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleDateString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(it.name,'String',e),xlCell(it.eng||si2rom(it.name)||'','String',e),xlCell(it.w,'Number',e),xlCell(it.price,'Number',e),xlCell(it.tot,'Number',g)],13));ii++;}));
-  const cw=ws=>ws.map(w=>`<Column ss:Width="${w}"/>`).join('');
-  return`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${styles}<Worksheet ss:Name="${sn}"><Table>${cw(hdrCols)}${dataRows.join('')}</Table></Worksheet><Worksheet ss:Name="Item Details"><Table>${cw([14,16,18,20,16,10,12,13])}${itemRows.join('')}</Table></Worksheet><Worksheet ss:Name="Summary"><Table>${cw([18,28])}${smry.join('')}</Table></Worksheet></Workbook>`;
-}
-function dlXLSX(xml,fn){const blob=new Blob(['\uFEFF'+xml],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn+'.xlsx';a.click();URL.revokeObjectURL(a.href);toast('✅ XLSX saved','ok');}
-function exDay(){const td=new Date().toDateString(),d=SALES.filter(s=>new Date(s.date).toDateString()===td);if(!d.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(d,'Daily'),'Daily_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));}
-function exMonth(){const m=new Date().getMonth()+'-'+new Date().getFullYear();const d=SALES.filter(s=>{const dt=new Date(s.date);return(dt.getMonth()+'-'+dt.getFullYear())===m;});if(!d.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(d,'Monthly'),'Monthly_'+new Date().toLocaleString('en',{month:'long'})+'_'+new Date().getFullYear());}
-function exAll(){if(!SALES.length){toast('❌ No data','err');return;}dlXLSX(buildXLSX(SALES,'All Sales'),'AllSales_'+Date.now());}
+/* ══ NEW TRUE XLSX EXPORT (No Errors) ══ */
+function exportToXLSX(dataArr, fileName) {
+  if (!window.XLSX) { toast('❌ Library Load වී නැත!', 'err'); return; }
+  
+  const wb = XLSX.utils.book_new();
 
+  // 1. Sales Summary Sheet
+  const summaryHeader = [["#", "Invoice No", "දිනය", "ගනුදෙනුකරු", "දුරකතනය", "භාණ්ඩ ගණන", "මුළු මුදල (රු.)"]];
+  const summaryRows = dataArr.map((s, i) => [
+    i + 1, s.invNo, new Date(s.date).toLocaleString('si-LK'), s.cust, s.custPhone || '', s.items.length, s.gt
+  ]);
+  const ws1 = XLSX.utils.aoa_to_sheet(summaryHeader.concat(summaryRows));
+  XLSX.utils.book_append_sheet(wb, ws1, "Sales Summary");
+
+  // 2. Item Details Sheet
+  const detailsHeader = [["Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩය (SI)", "Weight kg", "Price රු./kg", "Total රු."]];
+  let detailRows = [];
+  dataArr.forEach(s => {
+    s.items.forEach(it => {
+      detailRows.push([s.invNo, new Date(s.date).toLocaleDateString('si-LK'), s.cust, it.name, it.w, it.price, it.tot]);
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(detailsHeader.concat(detailRows));
+  XLSX.utils.book_append_sheet(wb, ws2, "Item Details");
+
+  // Save File
+  XLSX.writeFile(wb, fileName + ".xlsx");
+  toast('✅ සැබෑ XLSX ලෙස Saved!', 'ok');
+}
+
+function exDay(){
+  const td = new Date().toDateString(), d = SALES.filter(s => new Date(s.date).toDateString() === td);
+  if(!d.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
+  exportToXLSX(d, "Daily_Report_" + new Date().toLocaleDateString().replace(/\//g,'-'));
+}
+
+function exMonth(){
+  const m = (new Date().getMonth()+1)+'-'+new Date().getFullYear();
+  const d = SALES.filter(s => { 
+    const dt = new Date(s.date); 
+    return ((dt.getMonth()+1)+'-'+dt.getFullYear()) === m; 
+  });
+  if(!d.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
+  exportToXLSX(d, "Monthly_Report_" + m);
+}
+
+function exAll(){
+  if(!SALES.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
+  exportToXLSX(SALES, "All_Sales_History");
+}
 /* ══ BACKUP — IndexedDB persist ══ */
 async function restoreBackupHandle(){
   if(!CFG.autoBackup)return;
