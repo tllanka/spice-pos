@@ -1163,6 +1163,53 @@ window.addEventListener('beforeinstallprompt',(e)=>{
   defPr=e; 
   document.getElementById('pwaBanner').classList.remove('hide');
 });
+  /* PWA INSTALL BANNER - තැඹිලි පාටින් */
+.pwa-bar {
+  background: linear-gradient(90deg, #d4701e, #a03c0a);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  border-bottom: 2px solid #5a1e04;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  font-weight: bold;
+}
+.pwa-bar.hide { display: none; }
+.pwa-ibtn {
+  background: #fff;
+  color: #a03c0a;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+  /* PWA INSTALL LOGIC */
+let defPr;
+window.addEventListener('beforeinstallprompt', (e) => {
+  // බ්‍රවුසරය විසින් ඉබේම Prompt එක පෙන්වන එක නතර කර අපේ බැනරය පෙන්වීම
+  e.preventDefault();
+  defPr = e;
+  const banner = document.getElementById('pwaBanner');
+  if (banner) banner.classList.remove('hide');
+});
+
+function installPWA() {
+  if (!defPr) return;
+  defPr.prompt(); // Install window එක පෙන්වීම
+  defPr.userChoice.then((choice) => {
+    if (choice.outcome === 'accepted') {
+      document.getElementById('pwaBanner').classList.add('hide');
+    }
+    defPr = null;
+  });
+}
 </script>
 </body>
 </html>
