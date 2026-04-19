@@ -251,6 +251,42 @@ html,body{font-family:var(--F);background:var(--bg);color:var(--txt);min-height:
     gap: 10px;
   }
 }
+  /* ලැප්ටොප් එකේ බටන් පෙනීමට සහ ලිස්ට් එකට පමණක් Scroll එකක් ලබා දීමට */
+.cko {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 100px);
+  position: sticky;
+  top: 70px;
+}
+.ilw { flex: 1; overflow-y: auto; }
+
+/* තැඹිලි පාට PWA ඉන්ස්ටෝල් බැනරය */
+.pwa-bar {
+  background: linear-gradient(90deg, #d4701e, #a03c0a);
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  border-bottom: 2px solid #5a1e04;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  font-weight: bold;
+}
+.pwa-bar.hide { display: none; }
+.pwa-ibtn {
+  background: #fff;
+  color: #a03c0a;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 800;
+}
 </style>
 </head>
 <body>
