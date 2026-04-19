@@ -239,7 +239,17 @@ html,body{font-family:var(--F);background:var(--bg);color:var(--txt);min-height:
 @media print{body>*:not(#pzone){display:none!important}#pzone{display:block!important;position:fixed;inset:0;background:#fff;padding:8px}}
 /* Responsive */
 @media(max-width:860px){.pos{grid-template-columns:1fr}.cko{position:static;max-height:none}.adm{flex-direction:column}.asb{width:100%;display:flex;overflow-x:auto;padding:5px;gap:3px}.asl{display:none}.am{border-left:none;border-bottom:2.5px solid transparent;white-space:nowrap;padding:6px 10px;border-radius:8px;margin:0;font-size:.78rem}.am.on{border-bottom-color:var(--acc3);border-left-color:transparent}.fgg{grid-template-columns:1fr}.rcs{grid-template-columns:1fr}.ivmeta{grid-template-columns:1fr}.imc:first-child{border-right:none;border-bottom:1px solid var(--bdr)}.ivbtns-bot .btn{flex:1;justify-content:center}.con-grid{grid-template-columns:1fr}}
-@media(max-width:640px){.igrid{grid-template-columns:repeat(2,1fr)!important}.h-s{display:none}}
+@media(max-width: 640px) {
+  /* Header එකේ නම තිබෙන කොටස hide කිරීමට */
+  .hdr > div:first-child { display: none; }
+  
+  /* Icons ටික මැදට හෝ සම්පූර්ණ ඉඩ ගන්නා සේ සකස් කිරීමට */
+  .h-r { 
+    width: 100%; 
+    justify-content: space-between; 
+    gap: 10px;
+  }
+}
 </style>
 </head>
 <body>
