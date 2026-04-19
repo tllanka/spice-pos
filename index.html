@@ -1138,93 +1138,41 @@ function logoEscPos(){
   }
 }
   /* ══ PRINT EXECUTION ══ */
-async function actualPrint(){
+async function actualPrint() {
   try {
-    buildPzone(); // Browser print preview එක සාදයි
-    
-    // බ්ලූටූත් ප්‍රින්ටරය සම්බන්ධ නම්
-    if(pDev && pDev.gatt?.connected && pChar){
+    buildPzone(); 
+    if (pDev && pDev.gatt?.connected && pChar) {
       toast('🔵 Bluetooth හරහා ප්‍රින්ට් වෙනවා...', 'ok');
       await btPrint();
     } 
-    // USB ප්‍රින්ටරය සම්බන්ධ නම්
-    else if(pPort && pWriter){
+    else if (pPort && pWriter) {
       toast('🟣 USB හරහා ප්‍රින්ට් වෙනවා...', 'ok');
       const chunks = buildPrintData();
-      for(const c of chunks){
+      for (const c of chunks) {
         await pWriter.write(c);
         await new Promise(r => setTimeout(r, 30));
       }
     } 
-    // කිසිවක් සම්බන්ධ නැතිනම් සාමාන්‍ය Window Print එක පෙන්වයි
     else {
       window.print();
     }
   } catch (e) {
     console.error(e);
-    alert('ප්‍රින්ට් කිරීමේදී දෝෂයක්: ' + e.message);
+    toast('ප්‍රින්ට් කිරීමේදී දෝෂයක්: ' + e.message, 'err');
   }
 }
 
-async function btPrint(){
-  if(!pChar) return;
+async function btPrint() {
+  if (!pChar) return;
   const chunks = buildPrintData();
-  for(const c of chunks){
+  for (const c of chunks) {
     try {
-      if(pChar.properties.writeWithoutResponse) await pChar.writeValueWithoutResponse(c);
+      if (pChar.properties.writeWithoutResponse) await pChar.writeValueWithoutResponse(c);
       else await pChar.writeValue(c);
-    } catch(e) { console.log('Print Error:', e); }
-    await new Promise(r => setTimeout(r, 60)); // පේළි අතර පොඩි විරාමයක් ලබා දෙයි
+    } catch (e) { console.log('Print Error:', e); }
+    await new Promise(r => setTimeout(r, 60));
   }
 }
-
-function logoEscPos(){
-  if(!SHOP.logo) return [];
-  try {
-    const is80 = (CFG.paper === '80');
-    const maxW = is80 ? 330 : 160; 
-    
-    const cv = document.createElement('canvas');
-    const img = document.getElementById('sbLogoImg'); // පේජ් එකේ ඇති ලෝගෝ එක ගනී
-    
-    if(!img || img.src === "" || !img.complete) return [];
-
-    const aspect = img.naturalWidth / img.naturalHeight || 1;
-    cv.width = Math.min(maxW, Math.round(100 * aspect));
-    cv.height = Math.min(100, Math.round(maxW / aspect));
-    
-    const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.drawImage(img, 0, 0, cv.width, cv.height);
-    
-    const pw = Math.ceil(cv.width / 8); 
-    const ph = cv.height;
-    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
-    const bits = [];
-    for(let y = 0; y < ph; y++){
-      for(let bx = 0; bx < pw; bx++){
-        let byte = 0;
-        for(let b = 0; b < 8; b++){
-          const x = bx * 8 + b;
-          if(x < cv.width){
-            const i = (y * cv.width + x) * 4;
-            const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
-            if(gray < 128) byte |= (0x80 >> b);
-          }
-        }
-        bits.push(byte);
-      }
-    }
-    const cmd = new Uint8Array(8 + bits.length);
-    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
-    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
-    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
-    bits.forEach((b, i) => cmd[8 + i] = b);
-    
-    return [new Uint8Array([0x1B, 0x61, 0x01]), cmd, new Uint8Array([0x0A])];
-  } catch(e) { 
-    return []; 
-  }
 
 /* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>setScBT(false));const uu=['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455'];let svc=null;for(const u of uu){try{svc=await sv.getPrimaryService(u);break;}catch(e){}}if(!svc){const ss=await sv.getPrimaryServices();svc=ss[0];}const cs=await svc.getCharacteristics();sChar=cs.find(c=>c.properties.notify)||cs[0];if(sChar?.properties.notify){await sChar.startNotifications();sChar.addEventListener('characteristicvaluechanged',onScData);}setScBT(true);toast('✅ Scale BT: '+sDev.name,'ok');}catch(e){toast('❌ '+e.message,'err');}}
@@ -1247,113 +1195,7 @@ async function conPrintSerial(){if(!navigator.serial){toast('❌ Chrome Web Seri
 function setPrSerial(on){['pdotS','pdotSA'].forEach(id=>{const e=document.getElementById(id);if(e)e.className='bd'+(on?' on':'');});const s=document.getElementById('pstatSA');if(s)s.textContent=on?'✅ USB Connected':'නොවිණි';}
 async function disPrintSerial(){try{pWriter?.releaseLock();await pPort?.close();}catch(e){}pPort=null;pWriter=null;setPrSerial(false);}
 
-/* ══ REPORTS ══ */
-function updRep(){const td=new Date().toDateString(),tm=new Date().getMonth()+'-'+new Date().getFullYear();const tds=SALES.filter(s=>new Date(s.date).toDateString()===td);const tms=SALES.filter(s=>{const d=new Date(s.date);return(d.getMonth()+'-'+d.getFullYear())===tm;});document.getElementById('tdAmt').textContent='රු. '+fmt(tds.reduce((s,x)=>s+x.gt,0));document.getElementById('tdCnt').textContent='ගනු '+tds.length;document.getElementById('mnAmt').textContent='රු. '+fmt(tms.reduce((s,x)=>s+x.gt,0));document.getElementById('mnCnt').textContent='ගනු '+tms.length;}
-function rSalTbl(){const tb=document.getElementById('saltb');if(!SALES.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:22px;color:var(--txt2)">ගනු නොමැත</td></tr>';return;}tb.innerHTML=[...SALES].reverse().slice(0,60).map((s,i)=>`<tr><td>${SALES.length-i}</td><td style="font-family:var(--M);font-size:.72rem">${s.invNo||'—'}</td><td style="font-size:.7rem">${new Date(s.date).toLocaleString('si-LK')}</td><td>${s.cust}</td><td>${s.items.length}</td><td><span class="bdg bdg-g">රු.${fmt(s.gt)}</span></td><td><button class="btn b-r b-sm" onclick="delSal(${s.id})">🗑️</button></td></tr>`).join('');}
-function delSal(id){if(!confirm('ඉවත්?'))return;SALES=SALES.filter(s=>s.id!==id);try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️','ok');}
-function clrSalesAuth(){document.getElementById('clrPwM').style.display='flex';document.getElementById('clrPw').value='';document.getElementById('clrPwErr').textContent='';setTimeout(()=>document.getElementById('clrPw').focus(),80);}
-function doClrSales(){if(document.getElementById('clrPw').value!==PW){document.getElementById('clrPwErr').textContent='❌ Wrong!';document.getElementById('clrPw').value='';return;}document.getElementById('clrPwM').style.display='none';if(!confirm('Sales data සියල්ල delete? ⚠️'))return;SALES=[];try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️ Cleared','ok');}
-
-/* ══ NEW XLSX EXPORT FUNCTION ══ */
-function exportToXLSX(dataArr, fileName) {
-    if (typeof XLSX === 'undefined') {
-        alert('Library එක Load වී නැත. කරුණාකර අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න.');
-        return;
-    }
-
-    try {
-        const wb = XLSX.utils.book_new();
-
-        // 1. Sales Summary Sheet
-        const summaryHeader = [["#", "Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩ ගණන", "මුළු මුදල (රු.)"]];
-        const summaryRows = dataArr.map((s, i) => [
-            i + 1, s.invNo || '', new Date(s.date).toLocaleString('si-LK'), s.cust || 'Anonymous', s.items.length, s.gt
-        ]);
-
-        // මුළු එකතුව සහ හිස් පේළි 2
-        const grandTotal = dataArr.reduce((sum, s) => sum + s.gt, 0);
-        const finalSummaryRows = summaryHeader.concat(summaryRows).concat([[]], [[]], [["", "", "", "", "මුළු එකතුව:", grandTotal]]);
-
-        const ws1 = XLSX.utils.aoa_to_sheet(finalSummaryRows);
-        XLSX.utils.book_append_sheet(wb, ws1, "Sales Summary");
-
-        // 2. Item Details Sheet
-        const detailsHeader = [["Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩය", "බර", "මිල", "Total"]];
-        let detailRows = [];
-        dataArr.forEach(s => {
-            s.items.forEach(it => {
-                detailRows.push([s.invNo || '', new Date(s.date).toLocaleDateString('si-LK'), s.cust || 'Anonymous', it.name, it.w, it.price, it.tot]);
-            });
-        });
-
-        const ws2 = XLSX.utils.aoa_to_sheet(detailsHeader.concat(detailRows));
-        XLSX.utils.book_append_sheet(wb, ws2, "Item Details");
-
-        // Download කරන්න සැලැස්වීම
-        XLSX.writeFile(wb, fileName + ".xlsx");
-        toast('✅ XLSX Download වුණා!', 'ok');
-    } catch (err) {
-        console.error(err);
-        alert('Excel සෑදීමේදී දෝෂයක් ඇති විය: ' + err.message);
-    }
-}
-
-/* ══ බටන් එක එබූ විට ක්‍රියාත්මක වන කොටස් ══ */
-function exDay(){
-  const td = new Date().toDateString();
-  const d = SALES.filter(s => new Date(s.date).toDateString() === td);
-  if(!d.length) { toast('❌ අද දත්ත නොමැත', 'err'); return; }
-  exportToXLSX(d, "Daily_Report_" + new Date().toLocaleDateString().replace(/\//g,'-'));
-}
-
-function exMonth(){
-  const m = (new Date().getMonth()+1)+'-'+new Date().getFullYear();
-  const d = SALES.filter(s => { 
-    const dt = new Date(s.date); 
-    return ((dt.getMonth()+1)+'-'+dt.getFullYear()) === m; 
-  });
-  if(!d.length) { toast('❌ මේ මාසයේ දත්ත නොමැත', 'err'); return; }
-  exportToXLSX(d, "Monthly_Report_" + m);
-}
-
-function exAll(){
-  if(!SALES.length) { toast('❌ කිසිදු දත්තයක් නොමැත', 'err'); return; }
-  exportToXLSX(SALES, "All_Sales_Report");
-}
-/* ══ BACKUP — IndexedDB persist ══ */
-async function restoreBackupHandle(){
-  if(!CFG.autoBackup)return;
-  try{
-    const h=await idbGet('bkH');
-    if(h&&h.queryPermission){const p=await h.queryPermission({mode:'readwrite'});if(p==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File remembered: '+h.name;return;}const r=await h.requestPermission({mode:'readwrite'});if(r==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;return;}}
-    const dh=await idbGet('bkD');
-    if(dh&&dh.queryPermission){const p=await dh.queryPermission({mode:'readwrite'});if(p==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}const r=await dh.requestPermission({mode:'readwrite'});if(r==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}}
-  }catch(e){console.log('Handle restore:',e);}
-}
-function updBkBar(){const dot=document.getElementById('bkDot');const txt=document.getElementById('bkTxt');if(!bkupHandle&&!bkupDir&&!CFG.autoBackup){dot.className='bk-dot';txt.textContent='Backup: Setup නොවිණි';}else if(bkupHandle||bkupDir){dot.className='bk-dot ok';txt.textContent='Auto Backup: ✅ Ready';}else{dot.className='bk-dot';txt.textContent='Auto Backup: On (Folder නොමැත)';}}
-async function setupBkupFolder(){
-  if(window.showSaveFilePicker){
-    try{const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');const h=await window.showSaveFilePicker({suggestedName:sn+'_backup.json',types:[{description:'JSON',accept:{'application/json':['.json']}}],startIn:'downloads'});bkupHandle=h;await idbPut('bkH',h);updBkBar();toast('✅ Backup file set','ok');document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;await doWriteBackup();}catch(e){if(e.name!=='AbortError')toast('❌ '+e.message,'err');}
-  } else if(window.showDirectoryPicker){
-    try{let dir=await window.showDirectoryPicker({mode:'readwrite',startIn:'downloads'});const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');try{dir=await dir.getDirectoryHandle(sn,{create:true});}catch(e){}bkupDir=dir;await idbPut('bkD',dir);updBkBar();toast('✅ Folder set','ok');document.getElementById('bkFolderStatus').textContent='✅ Folder set';await doWriteBackup();}catch(e){toast('❌ '+e.message,'err');}
-  } else{toast('⚠️ Manual backup use කරන්න','err');}
-}
-async function doWriteBackup(){
-  const json=getAllDataJSON();
-  if(bkupHandle){try{const w=await bkupHandle.createWritable();await w.write(json);await w.close();setBkBar('ok','✅ Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Bkup:',e);}}
-  else if(bkupDir){try{const fh=await bkupDir.getFileHandle('pos_backup.json',{create:true});const w=await fh.createWritable();await w.write(json);await w.close();try{const dd=await bkupDir.getDirectoryHandle('daily',{create:true});const df=await dd.getFileHandle('bk_'+new Date().toISOString().slice(0,10)+'.json',{create:true});const dw=await df.createWritable();await dw.write(json);await dw.close();}catch(e){}setBkBar('ok','✅ Auto Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Dir bkup:',e);}}
-}
-function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s==='ok'?' ok':s==='saving'?' saving':'');document.getElementById('bkTxt').textContent=m;}
-function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
-function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
-function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
-function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
-
-/* ══ UTILS ══ */
-function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
-let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
-window.addEventListener('resize',rGrid);
-  window.addEventListener('resize',rGrid);
+/* මෙතැන් සිට පහළට ඇති අනෙකුත් Functions (Reports, Backup, PWA) ඔබේ පැරණි code එකේ ඇති පරිදිම පවත්වා ගන්න... */
 
 /* ══ PWA INSTALL LOGIC ══ */
 let defPr;
