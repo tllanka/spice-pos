@@ -1029,95 +1029,114 @@ ${inv.map(l=>{
 <div class="pz-f">${foot}</div>`;
 }
 
-/* ══ ESC/POS DATA — paper size + logo ══ */
+/* ══ ESC/POS DATA — 58mm සහ 80mm යන දෙකටම ගැලපෙන ලෙස ══ */
 function buildPrintData(){
-  const E=0x1B,G=0x1D;
-  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
-  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const is80=(CFG.paper||'58')==='80';
-  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
-  const foot=is80?(SHOP.foot||'ස්තූතියි!'):(si2rom(SHOP.foot)||'Thank You!');
+  const E=0x1B, G=0x1D;
+  const sale=SALES[SALES.length-1];
+  const invNo=sale?.invNo||'—';
+  const cust=document.getElementById('cust').value.trim();
+  const gt=inv.reduce((s,l)=>s+l.tot,0);
+  
+  // පේපර් සයිස් එක අනුව තීරණය කිරීම
+  const is80 = (CFG.paper === '80');
+  
+  // 80mm නම් සිංහල, 58mm නම් රෝම අකුරු
+  const shopN = is80 ? (SHOP.sin || 'Shop') : (si2rom(SHOP.sin) || 'Shop');
+  const foot = is80 ? (SHOP.foot || 'ස්තූතියි!') : (si2rom(SHOP.foot) || 'Thank You!');
 
-  // UTF-8 code page for 80mm (if printer supports)
-  const cpSet=is80?[E,0x74,0x00]:[E,0x74,0x00]; // PC437
-
-  const enc=new TextEncoder();
-  const chunks=[
-    new Uint8Array([E,0x40]),                          // init
-    new Uint8Array(cpSet),                              // code page
-    // Logo bitmap (simplified — if SHOP.logo exists, attempt GS v 0)
+  const enc = new TextEncoder(); // UTF-8 encoding භාවිතා කරයි
+  const chunks = [
+    new Uint8Array([E, 0x40]),                          // Reset printer
+    
+    // 1. Logo එක මැදට ගැනීම
     ...logoEscPos(),
-    new Uint8Array([E,0x61,1]),                         // center
-    enc.encode(shopN+'\n'),
-    SHOP.eng&&is80?enc.encode(SHOP.eng+'\n'):null,
-    SHOP.addr?enc.encode(SHOP.addr+'\n'):null,
-    SHOP.tel?enc.encode('Tel:'+SHOP.tel+'\n'):null,
-    enc.encode('================================\n'),
-    new Uint8Array([E,0x61,0]),
-    enc.encode('Invoice:'+invNo+' '+new Date().toLocaleDateString('en-GB')+'\n'),
-    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+(curCustPh?' '+curCustPh:'')+'\n'):null,
-    enc.encode('--------------------------------\n'),
-    ...inv.map(l=>{
-      const nm=is80?l.item.sin:(l.item.eng||si2rom(l.item.sin));
-      return enc.encode(`${nm}\n  ${l.w.toFixed(3)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\n`);
+    
+    new Uint8Array([E, 0x61, 1]),                         // Center align
+    // 2. Shop Info
+    enc.encode(shopN + '\n'),
+    SHOP.tel ? enc.encode('Tel: ' + SHOP.tel + '\n') : null,
+    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
+    
+    new Uint8Array([E, 0x61, 0]),                         // Left align
+    enc.encode('Inv: ' + invNo + '  ' + new Date().toLocaleDateString('en-GB') + '\n'),
+    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + (is80 ? cust : si2rom(cust)) + '\n') : null,
+    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
+    
+    // 3. Items
+    ...inv.map(l => {
+      const nm = is80 ? l.item.sin : si2rom(l.item.sin);
+      // 80mm දී සියල්ල එක පේළියක තැබීමට උත්සාහ කරයි, 58mm දී පේළි දෙකක් භාවිතා කරයි
+      if(is80) {
+        return enc.encode(`${nm.padEnd(20)} ${l.w.toFixed(2)}kg x ${l.item.price.toFixed(0)} = ${l.tot.toFixed(2)}\n`);
+      } else {
+        return enc.encode(`${nm}\n ${l.w.toFixed(2)}kg x ${l.item.price} = ${l.tot.toFixed(2)}\n`);
+      }
     }),
-    enc.encode('================================\n'),
-    new Uint8Array([G,0x21,0x11]),
-    enc.encode('Total: Rs.'+fmt(gt)+'\n'),
-    new Uint8Array([G,0x21,0]),enc.encode('\n'),
-    new Uint8Array([E,0x61,1]),
-    enc.encode(foot+'\n\n\n'),
-    new Uint8Array([G,0x56,0x41,0x10]),
+    
+    enc.encode(is80 ? '==========================================\n' : '--------------------------------\n'),
+    
+    // 4. Total (තද අකුරු - Bold)
+    new Uint8Array([E, 0x21, 0x08]),                      // Bold mode ON
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
+    new Uint8Array([E, 0x21, 0x00]),                      // Bold mode OFF
+    
+    enc.encode('\n'),
+    new Uint8Array([E, 0x61, 1]),                         // Center align
+    enc.encode(foot + '\n\n\n'),
+    new Uint8Array([G, 0x56, 0x41, 0x10]),                 // Paper cut
   ];
   return chunks.filter(Boolean);
 }
 
 function logoEscPos(){
-  // Convert logo to 1-bit bitmap for ESC/POS
-  // Only attempt if logo exists and canvas available
-  if(!SHOP.logo)return[];
-  try{
-    const img=new Image();img.src=SHOP.logo;
-    const is80=(CFG.paper||'58')==='80';
-    const maxW=is80?384:240;const maxH=80;
-    const cv=document.createElement('canvas');
-    const aspect=img.naturalWidth/img.naturalHeight||1;
-    cv.width=Math.min(maxW,Math.round(maxH*aspect));
-    cv.height=Math.min(maxH,Math.round(maxW/aspect));
-    const ctx=cv.getContext('2d');
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.drawImage(img,0,0,cv.width,cv.height);
-    const pw=Math.ceil(cv.width/8);const ph=cv.height;
-    const data=ctx.getImageData(0,0,cv.width,cv.height).data;
-    const bits=[];
-    for(let y=0;y<ph;y++){
-      for(let bx=0;bx<pw;bx++){
-        let byte=0;
-        for(let b=0;b<8;b++){
-          const x=bx*8+b;
-          if(x<cv.width){
-            const i=(y*cv.width+x)*4;
-            const gray=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
-            if(gray<128)byte|=(0x80>>b);
+  if(!SHOP.logo) return [];
+  try {
+    const img = new Image(); 
+    img.src = SHOP.logo;
+    const is80 = (CFG.paper === '80');
+    
+    // පේපර් සයිස් එක අනුව ලෝගෝවේ පළල තීරණය කිරීම
+    const maxW = is80 ? 350 : 180; 
+    const maxH = 100;
+    
+    const cv = document.createElement('canvas');
+    const aspect = img.naturalWidth / img.naturalHeight || 1;
+    cv.width = Math.min(maxW, Math.round(maxH * aspect));
+    cv.height = Math.min(maxH, Math.round(maxW / aspect));
+    
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; 
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    
+    const pw = Math.ceil(cv.width / 8); 
+    const ph = cv.height;
+    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    const bits = [];
+    for(let y = 0; y < ph; y++){
+      for(let bx = 0; bx < pw; bx++){
+        let byte = 0;
+        for(let b = 0; b < 8; b++){
+          const x = bx * 8 + b;
+          if(x < cv.width){
+            const i = (y * cv.width + x) * 4;
+            const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+            if(gray < 128) byte |= (0x80 >> b);
           }
         }
         bits.push(byte);
       }
     }
-    const cmd=new Uint8Array(8+bits.length);
-    // GS v 0: [1D 76 30 00 pw_l pw_h ph_l ph_h ...data]
-    cmd[0]=0x1D;cmd[1]=0x76;cmd[2]=0x30;cmd[3]=0x00;
-    cmd[4]=pw&0xff;cmd[5]=(pw>>8)&0xff;
-    cmd[6]=ph&0xff;cmd[7]=(ph>>8)&0xff;
-    bits.forEach((b,i)=>cmd[8+i]=b);
-    return[cmd,new Uint8Array([0x0A])]; // print + LF
-  }catch(e){return[];}
-}
-
-async function btPrint(){const chunks=buildPrintData();for(const c of chunks){try{if(pChar.properties.writeWithoutResponse)await pChar.writeValueWithoutResponse(c);else await pChar.writeValue(c);}catch(e){}await new Promise(r=>setTimeout(r,40));}}
-async function serialPrint(){const chunks=buildPrintData();for(const c of chunks){try{await pWriter.write(c);}catch(e){}await new Promise(r=>setTimeout(r,20));}}
-
-/* ══ BT SCALE ══ */
+    const cmd = new Uint8Array(8 + bits.length);
+    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
+    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
+    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
+    bits.forEach((b, i) => cmd[8 + i] = b);
+    
+    // ESC a 1 (Centering) විධානය සමඟ ලෝගෝව යැවීම
+    return [new Uint8Array([0x1B, 0x61, 0x01]), cmd, new Uint8Array([0x0A])];
+  } catch(e) { return []; }
+}/* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>setScBT(false));const uu=['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455'];let svc=null;for(const u of uu){try{svc=await sv.getPrimaryService(u);break;}catch(e){}}if(!svc){const ss=await sv.getPrimaryServices();svc=ss[0];}const cs=await svc.getCharacteristics();sChar=cs.find(c=>c.properties.notify)||cs[0];if(sChar?.properties.notify){await sChar.startNotifications();sChar.addEventListener('characteristicvaluechanged',onScData);}setScBT(true);toast('✅ Scale BT: '+sDev.name,'ok');}catch(e){toast('❌ '+e.message,'err');}}
 function onScData(e){parseWeight(new TextDecoder().decode(e.target.value));}
 function setScBT(on){['sdot','sdotA'].forEach(id=>{const e=document.getElementById(id);if(e)e.className='bd'+(on?' on':'');});document.getElementById('wdH').className='wd'+(on?' on':'');const s=document.getElementById('sstatA');if(s)s.textContent=on?'✅ BT Connected':'නොවිණි';}
