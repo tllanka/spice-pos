@@ -1145,44 +1145,71 @@ function delSal(id){if(!confirm('ඉවත්?'))return;SALES=SALES.filter(s=>s.
 function clrSalesAuth(){document.getElementById('clrPwM').style.display='flex';document.getElementById('clrPw').value='';document.getElementById('clrPwErr').textContent='';setTimeout(()=>document.getElementById('clrPw').focus(),80);}
 function doClrSales(){if(document.getElementById('clrPw').value!==PW){document.getElementById('clrPwErr').textContent='❌ Wrong!';document.getElementById('clrPw').value='';return;}document.getElementById('clrPwM').style.display='none';if(!confirm('Sales data සියල්ල delete? ⚠️'))return;SALES=[];try{localStorage.setItem('S',JSON.stringify(SALES));triggerAutoBackup();}catch(e){}updRep();rSalTbl();toast('🗑️ Cleared','ok');}
 
-/* ══ NEW TRUE XLSX EXPORT (No Errors) ══ */
+/* ══ NEW XLSX EXPORT FUNCTION ══ */
 function exportToXLSX(dataArr, fileName) {
-  if (!window.XLSX) { toast('❌ Library Load වී නැත!', 'err'); return; }
-  
-  const wb = XLSX.utils.book_new();
+    if (typeof XLSX === 'undefined') {
+        alert('Library එක Load වී නැත. කරුණාකර අන්තර්ජාල සම්බන්ධතාවය පරීක්ෂා කරන්න.');
+        return;
+    }
 
-  // 1. Sales Summary Sheet
-  const summaryHeader = [["#", "Invoice No", "දිනය", "ගනුදෙනුකරු", "දුරකතනය", "භාණ්ඩ ගණන", "මුළු මුදල (රු.)"]];
-  const summaryRows = dataArr.map((s, i) => [
-    i + 1, s.invNo, new Date(s.date).toLocaleString('si-LK'), s.cust, s.custPhone || '', s.items.length, s.gt
-  ]);
+    try {
+        const wb = XLSX.utils.book_new();
 
-  // --- මෙතැන් සිට වෙනස් කළ කොටස ---
-  // මුළු එකතුව ගණනය කිරීම
-  const grandTotal = dataArr.reduce((sum, s) => sum + s.gt, 0);
+        // 1. Sales Summary Sheet
+        const summaryHeader = [["#", "Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩ ගණන", "මුළු මුදල (රු.)"]];
+        const summaryRows = dataArr.map((s, i) => [
+            i + 1, s.invNo || '', new Date(s.date).toLocaleString('si-LK'), s.cust || 'Anonymous', s.items.length, s.gt
+        ]);
 
-  // පේළි දෙකක් හිස්ව තබා ([[]], [[]]) අවසානයට මුළු එකතුව එකතු කිරීම
-  const finalSummaryRows = summaryHeader.concat(summaryRows).concat([[]], [[]], [["", "", "", "", "", "මුළු එකතුව:", grandTotal]]);
+        // මුළු එකතුව සහ හිස් පේළි 2
+        const grandTotal = dataArr.reduce((sum, s) => sum + s.gt, 0);
+        const finalSummaryRows = summaryHeader.concat(summaryRows).concat([[]], [[]], [["", "", "", "", "මුළු එකතුව:", grandTotal]]);
 
-  const ws1 = XLSX.utils.aoa_to_sheet(finalSummaryRows);
-  // --- වෙනස් කළ කොටස අවසානය ---
+        const ws1 = XLSX.utils.aoa_to_sheet(finalSummaryRows);
+        XLSX.utils.book_append_sheet(wb, ws1, "Sales Summary");
 
-  XLSX.utils.book_append_sheet(wb, ws1, "Sales Summary");
+        // 2. Item Details Sheet
+        const detailsHeader = [["Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩය", "බර", "මිල", "Total"]];
+        let detailRows = [];
+        dataArr.forEach(s => {
+            s.items.forEach(it => {
+                detailRows.push([s.invNo || '', new Date(s.date).toLocaleDateString('si-LK'), s.cust || 'Anonymous', it.name, it.w, it.price, it.tot]);
+            });
+        });
 
-  // 2. Item Details Sheet
-  const detailsHeader = [["Invoice No", "දිනය", "ගනුදෙනුකරු", "භාණ්ඩය (SI)", "Weight kg", "Price රු./kg", "Total රු."]];
-  let detailRows = [];
-  dataArr.forEach(s => {
-    s.items.forEach(it => {
-      detailRows.push([s.invNo, new Date(s.date).toLocaleDateString('si-LK'), s.cust, it.name, it.w, it.price, it.tot]);
-    });
+        const ws2 = XLSX.utils.aoa_to_sheet(detailsHeader.concat(detailRows));
+        XLSX.utils.book_append_sheet(wb, ws2, "Item Details");
+
+        // Download කරන්න සැලැස්වීම
+        XLSX.writeFile(wb, fileName + ".xlsx");
+        toast('✅ XLSX Download වුණා!', 'ok');
+    } catch (err) {
+        console.error(err);
+        alert('Excel සෑදීමේදී දෝෂයක් ඇති විය: ' + err.message);
+    }
+}
+
+/* ══ බටන් එක එබූ විට ක්‍රියාත්මක වන කොටස් ══ */
+function exDay(){
+  const td = new Date().toDateString();
+  const d = SALES.filter(s => new Date(s.date).toDateString() === td);
+  if(!d.length) { toast('❌ අද දත්ත නොමැත', 'err'); return; }
+  exportToXLSX(d, "Daily_Report_" + new Date().toLocaleDateString().replace(/\//g,'-'));
+}
+
+function exMonth(){
+  const m = (new Date().getMonth()+1)+'-'+new Date().getFullYear();
+  const d = SALES.filter(s => { 
+    const dt = new Date(s.date); 
+    return ((dt.getMonth()+1)+'-'+dt.getFullYear()) === m; 
   });
-  const ws2 = XLSX.utils.aoa_to_sheet(detailsHeader.concat(detailRows));
-  XLSX.utils.book_append_sheet(wb, ws2, "Item Details");
+  if(!d.length) { toast('❌ මේ මාසයේ දත්ත නොමැත', 'err'); return; }
+  exportToXLSX(d, "Monthly_Report_" + m);
+}
 
-  // Save File
-  XLSX.writeFile(wb, fileName + ".xlsx");
-  toast('✅ සැබෑ XLSX ලෙස Saved!', 'ok');
+function exAll(){
+  if(!SALES.length) { toast('❌ කිසිදු දත්තයක් නොමැත', 'err'); return; }
+  exportToXLSX(SALES, "All_Sales_Report");
 }
 /* ══ BACKUP — IndexedDB persist ══ */
 async function restoreBackupHandle(){
