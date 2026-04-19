@@ -1091,22 +1091,20 @@ function buildPrintData(){
 function logoEscPos(){
   if(!SHOP.logo) return [];
   try {
-    const img = new Image(); 
-    img.src = SHOP.logo;
     const is80 = (CFG.paper === '80');
-    
-    // පේපර් සයිස් එක අනුව ලෝගෝවේ පළල තීරණය කිරීම
-    const maxW = is80 ? 350 : 180; 
-    const maxH = 100;
+    const maxW = is80 ? 330 : 160; // ඉඩ ප්‍රමාණයට අනුව ලෝගෝ එක පාලනය කරයි
     
     const cv = document.createElement('canvas');
+    const img = document.getElementById('sbLogoImg'); // දැනටමත් පේජ් එකේ තියෙන රූපය ගනී
+    
+    if(!img || img.src === "") return [];
+
     const aspect = img.naturalWidth / img.naturalHeight || 1;
-    cv.width = Math.min(maxW, Math.round(maxH * aspect));
-    cv.height = Math.min(maxH, Math.round(maxW / aspect));
+    cv.width = Math.min(maxW, Math.round(100 * aspect));
+    cv.height = Math.min(100, Math.round(maxW / aspect));
     
     const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#fff'; 
-    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     
     const pw = Math.ceil(cv.width / 8); 
@@ -1133,9 +1131,101 @@ function logoEscPos(){
     cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
     bits.forEach((b, i) => cmd[8 + i] = b);
     
-    // ESC a 1 (Centering) විධානය සමඟ ලෝගෝව යැවීම
     return [new Uint8Array([0x1B, 0x61, 0x01]), cmd, new Uint8Array([0x0A])];
-  } catch(e) { return []; }
+  } catch(e) { 
+    console.error('Logo logic error:', e);
+    return []; 
+  }
+}
+  /* ══ PRINT EXECUTION ══ */
+async function actualPrint(){
+  try {
+    buildPzone(); // Browser print preview එක සාදයි
+    
+    // බ්ලූටූත් ප්‍රින්ටරය සම්බන්ධ නම්
+    if(pDev && pDev.gatt?.connected && pChar){
+      toast('🔵 Bluetooth හරහා ප්‍රින්ට් වෙනවා...', 'ok');
+      await btPrint();
+    } 
+    // USB ප්‍රින්ටරය සම්බන්ධ නම්
+    else if(pPort && pWriter){
+      toast('🟣 USB හරහා ප්‍රින්ට් වෙනවා...', 'ok');
+      const chunks = buildPrintData();
+      for(const c of chunks){
+        await pWriter.write(c);
+        await new Promise(r => setTimeout(r, 30));
+      }
+    } 
+    // කිසිවක් සම්බන්ධ නැතිනම් සාමාන්‍ය Window Print එක පෙන්වයි
+    else {
+      window.print();
+    }
+  } catch (e) {
+    console.error(e);
+    alert('ප්‍රින්ට් කිරීමේදී දෝෂයක්: ' + e.message);
+  }
+}
+
+async function btPrint(){
+  if(!pChar) return;
+  const chunks = buildPrintData();
+  for(const c of chunks){
+    try {
+      if(pChar.properties.writeWithoutResponse) await pChar.writeValueWithoutResponse(c);
+      else await pChar.writeValue(c);
+    } catch(e) { console.log('Print Error:', e); }
+    await new Promise(r => setTimeout(r, 60)); // පේළි අතර පොඩි විරාමයක් ලබා දෙයි
+  }
+}
+
+function logoEscPos(){
+  if(!SHOP.logo) return [];
+  try {
+    const is80 = (CFG.paper === '80');
+    const maxW = is80 ? 330 : 160; 
+    
+    const cv = document.createElement('canvas');
+    const img = document.getElementById('sbLogoImg'); // පේජ් එකේ ඇති ලෝගෝ එක ගනී
+    
+    if(!img || img.src === "" || !img.complete) return [];
+
+    const aspect = img.naturalWidth / img.naturalHeight || 1;
+    cv.width = Math.min(maxW, Math.round(100 * aspect));
+    cv.height = Math.min(100, Math.round(maxW / aspect));
+    
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    
+    const pw = Math.ceil(cv.width / 8); 
+    const ph = cv.height;
+    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    const bits = [];
+    for(let y = 0; y < ph; y++){
+      for(let bx = 0; bx < pw; bx++){
+        let byte = 0;
+        for(let b = 0; b < 8; b++){
+          const x = bx * 8 + b;
+          if(x < cv.width){
+            const i = (y * cv.width + x) * 4;
+            const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+            if(gray < 128) byte |= (0x80 >> b);
+          }
+        }
+        bits.push(byte);
+      }
+    }
+    const cmd = new Uint8Array(8 + bits.length);
+    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
+    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
+    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
+    bits.forEach((b, i) => cmd[8 + i] = b);
+    
+    return [new Uint8Array([0x1B, 0x61, 0x01]), cmd, new Uint8Array([0x0A])];
+  } catch(e) { 
+    return []; 
+  }
+}
 }/* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>setScBT(false));const uu=['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455'];let svc=null;for(const u of uu){try{svc=await sv.getPrimaryService(u);break;}catch(e){}}if(!svc){const ss=await sv.getPrimaryServices();svc=ss[0];}const cs=await svc.getCharacteristics();sChar=cs.find(c=>c.properties.notify)||cs[0];if(sChar?.properties.notify){await sChar.startNotifications();sChar.addEventListener('characteristicvaluechanged',onScData);}setScBT(true);toast('✅ Scale BT: '+sDev.name,'ok');}catch(e){toast('❌ '+e.message,'err');}}
 function onScData(e){parseWeight(new TextDecoder().decode(e.target.value));}
