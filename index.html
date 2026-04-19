@@ -1120,7 +1120,17 @@ function exportToXLSX(dataArr, fileName) {
   const summaryRows = dataArr.map((s, i) => [
     i + 1, s.invNo, new Date(s.date).toLocaleString('si-LK'), s.cust, s.custPhone || '', s.items.length, s.gt
   ]);
-  const ws1 = XLSX.utils.aoa_to_sheet(summaryHeader.concat(summaryRows));
+
+  // --- මෙතැන් සිට වෙනස් කළ කොටස ---
+  // මුළු එකතුව ගණනය කිරීම
+  const grandTotal = dataArr.reduce((sum, s) => sum + s.gt, 0);
+
+  // පේළි දෙකක් හිස්ව තබා ([[]], [[]]) අවසානයට මුළු එකතුව එකතු කිරීම
+  const finalSummaryRows = summaryHeader.concat(summaryRows).concat([[]], [[]], [["", "", "", "", "", "මුළු එකතුව:", grandTotal]]);
+
+  const ws1 = XLSX.utils.aoa_to_sheet(finalSummaryRows);
+  // --- වෙනස් කළ කොටස අවසානය ---
+
   XLSX.utils.book_append_sheet(wb, ws1, "Sales Summary");
 
   // 2. Item Details Sheet
@@ -1137,27 +1147,6 @@ function exportToXLSX(dataArr, fileName) {
   // Save File
   XLSX.writeFile(wb, fileName + ".xlsx");
   toast('✅ සැබෑ XLSX ලෙස Saved!', 'ok');
-}
-
-function exDay(){
-  const td = new Date().toDateString(), d = SALES.filter(s => new Date(s.date).toDateString() === td);
-  if(!d.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
-  exportToXLSX(d, "Daily_Report_" + new Date().toLocaleDateString().replace(/\//g,'-'));
-}
-
-function exMonth(){
-  const m = (new Date().getMonth()+1)+'-'+new Date().getFullYear();
-  const d = SALES.filter(s => { 
-    const dt = new Date(s.date); 
-    return ((dt.getMonth()+1)+'-'+dt.getFullYear()) === m; 
-  });
-  if(!d.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
-  exportToXLSX(d, "Monthly_Report_" + m);
-}
-
-function exAll(){
-  if(!SALES.length) { toast('❌ දත්ත නොමැත', 'err'); return; }
-  exportToXLSX(SALES, "All_Sales_History");
 }
 /* ══ BACKUP — IndexedDB persist ══ */
 async function restoreBackupHandle(){
