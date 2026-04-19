@@ -1156,6 +1156,13 @@ function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.o
 function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 window.addEventListener('resize',rGrid);
+  /* PWA INSTALLATION */
+let defPr;
+window.addEventListener('beforeinstallprompt',(e)=>{ 
+  e.preventDefault(); 
+  defPr=e; 
+  document.getElementById('pwaBanner').classList.remove('hide');
+});
 </script>
 </body>
 </html>
