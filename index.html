@@ -884,33 +884,30 @@ function buildSMSBody(){
     `\nTotal: Rs.${fmt(gt)}${foot?'\n'+foot:''}`;
 }
 function triggerSMSOpen(phone){
-  if(!phone)return;
-  const body=encodeURIComponent(buildSMSBody());
-  const ph=phone.replace(/\D/g,'');
-  const sim=CFG.sim||'auto';
-  const strip=document.getElementById('smsStrip');
+  if(!phone) return;
+  
+  // නම්බර් එකේ තියෙන හිස්තැන් ඉවත් කිරීම
+  const ph = phone.replace(/\D/g,'');
+  const body = encodeURIComponent(buildSMSBody());
+  
+  // ඕනෑම ෆෝන් එකකට ගැළපෙන සාමාන්‍ය SMS ලින්ක් එක
+  const uri = `sms:${ph}?body=${body}`;
 
-  let uri;
-  if(sim==='sim1'){
-    // Try Android dual-SIM intent via smsto: with subscription hint
-    uri=`intent://send?address=${ph}&body=${body}#Intent;scheme=smsto;package=com.android.mms;S.subscription_id=1;end`;
-  } else if(sim==='sim2'){
-    uri=`intent://send?address=${ph}&body=${body}#Intent;scheme=smsto;package=com.android.mms;S.subscription_id=2;end`;
-  } else {
-    uri=`sms:${ph}?body=${body}`;
-  }
+  try {
+    const a = document.createElement('a');
+    a.href = uri;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); }, 500);
 
-  try{
-    // Hidden link click — opens SMS app
-    const a=document.createElement('a');
-    a.href=uri;a.style.display='none';
-    document.body.appendChild(a);a.click();
-    setTimeout(()=>{try{document.body.removeChild(a);}catch(e){}},500);
-    strip.textContent='📱 SMS app opened → '+phone+' — Send button press කරන්න';
-    strip.className='sms-strip warn';
-  }catch(e){
-    strip.textContent='❌ SMS open failed';
-    strip.className='sms-strip warn';
+    const strip = document.getElementById('smsStrip');
+    if(strip) {
+      strip.textContent = '📱 SMS app opened → ' + phone;
+      strip.className = 'sms-strip warn';
+    }
+  } catch(e) {
+    toast('❌ SMS open failed', 'err');
   }
 }
 
