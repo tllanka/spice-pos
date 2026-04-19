@@ -1225,8 +1225,8 @@ function logoEscPos(){
   } catch(e) { 
     return []; 
   }
-}
-}/* ══ BT SCALE ══ */
+
+/* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>setScBT(false));const uu=['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455'];let svc=null;for(const u of uu){try{svc=await sv.getPrimaryService(u);break;}catch(e){}}if(!svc){const ss=await sv.getPrimaryServices();svc=ss[0];}const cs=await svc.getCharacteristics();sChar=cs.find(c=>c.properties.notify)||cs[0];if(sChar?.properties.notify){await sChar.startNotifications();sChar.addEventListener('characteristicvaluechanged',onScData);}setScBT(true);toast('✅ Scale BT: '+sDev.name,'ok');}catch(e){toast('❌ '+e.message,'err');}}
 function onScData(e){parseWeight(new TextDecoder().decode(e.target.value));}
 function setScBT(on){['sdot','sdotA'].forEach(id=>{const e=document.getElementById(id);if(e)e.className='bd'+(on?' on':'');});document.getElementById('wdH').className='wd'+(on?' on':'');const s=document.getElementById('sstatA');if(s)s.textContent=on?'✅ BT Connected':'නොවිණි';}
@@ -1353,10 +1353,28 @@ function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.o
 function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 window.addEventListener('resize',rGrid);
- 
+  window.addEventListener('resize',rGrid);
 
+/* ══ PWA INSTALL LOGIC ══ */
+let defPr;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  defPr = e;
+  const banner = document.getElementById('pwaBanner');
+  if (banner) banner.classList.remove('hide');
+});
 
-
+function installPWA() {
+  if (!defPr) return;
+  defPr.prompt();
+  defPr.userChoice.then((choice) => {
+    if (choice.outcome === 'accepted') {
+      const banner = document.getElementById('pwaBanner');
+      if (banner) banner.classList.add('hide');
+    }
+    defPr = null;
+  });
+}
 </script>
 </body>
 </html>
