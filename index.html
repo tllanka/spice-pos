@@ -869,7 +869,7 @@ function buildSMSBody(){
   const sale=SALES[SALES.length-1];const gt=inv.reduce((s,l)=>s+l.tot,0);
   const sn=SHOP.eng||si2rom(SHOP.sin)||'Shop';
   const foot=si2rom(SHOP.foot)||'';
-  return`${sn}\nInv:${sale?.invNo||'?'} ${new Date().toLocaleDateString('en-GB')}\n`+
+  return `${sn}\nInv:${sale?.invNo||'?'} ${new Date().toLocaleDateString('en-GB')}\n`+
     inv.map(l=>`${l.item.eng||si2rom(l.item.sin)} ${l.w.toFixed(3)}kg Rs.${fmt(l.tot)}`).join('\n')+
     `\nTotal: Rs.${fmt(gt)}${foot?'\n'+foot:''}`;
 }
