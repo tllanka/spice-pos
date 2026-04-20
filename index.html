@@ -961,19 +961,17 @@ function buildPzone(){
   const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
   const foot='Thank you..!';
 
-  // ලෝගෝව මැදට කර ප්‍රමාණය මඳක් වැඩි කරන ලදී
-  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?80:65}px; width:auto; display:block; margin:0 auto 5px; filter:grayscale(1) contrast(1.4)">`:'';
+  // Preview එකේ ලෝගෝ එක තවත් විශාල කරන ලදී
+  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?120:90}px; width:auto; display:block; margin:0 auto 8px; filter:grayscale(1) contrast(1.4)">`:'';
 
   document.getElementById('pzone').innerHTML=`
 <style>
 @page{size:${is80?'80mm':'58mm'} auto; margin:0}
-#pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0 auto; padding:4px; color:black;}
+#pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0 auto; padding:4px; color:black; background:white;}
 .pz-c{text-align:center; width:100%;}
-/* කඩේ නම විශාල කර Bold කරන ලදී */
 .pz-shop{font-size:${is80?22:18}px; font-weight:bold; text-transform:uppercase; margin-bottom:2px;}
 .pz-d{border-top:1px dashed #333; margin:4px 0}
 .pz-r{display:flex; justify-content:space-between}
-/* Total එක උසින් අඩු කර Bold (මහත) කරන ලදී */
 .pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:${is80?18:15}px; padding:4px 0; border-top:1px solid black; border-bottom:1px solid black; margin-top:5px;}
 .pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px}
 </style>
@@ -1039,21 +1037,33 @@ function buildPrintData(){
 }
 
 function logoEscPos(){
-  // Convert logo to 1-bit bitmap for ESC/POS
-  // Only attempt if logo exists and canvas available
   if(!SHOP.logo)return[];
   try{
-    const img=new Image();img.src=SHOP.logo;
+    const img=new Image(); img.src=SHOP.logo;
     const is80=(CFG.paper||'58')==='80';
-    const maxW=is80?384:240;const maxH=80;
+    
+    // ලෝගෝවේ පළල ප්‍රින්ටරයේ උපරිමයටම වැඩි කරන ලදී
+    // 58mm සඳහා 360px සහ 80mm සඳහා 552px (Multiple of 8)
+    const maxW = is80 ? 552 : 360; 
+    const maxH = 200; // උසත් මඳක් වැඩි කරන ලදී
+    
     const cv=document.createElement('canvas');
     const aspect=img.naturalWidth/img.naturalHeight||1;
-    cv.width=Math.min(maxW,Math.round(maxH*aspect));
-    cv.height=Math.min(maxH,Math.round(maxW/aspect));
+    
+    // ප්‍රමාණය ගණනය කිරීම
+    let w = maxW;
+    let h = Math.round(maxW / aspect);
+    if (h > maxH) { h = maxH; w = Math.round(maxH * aspect); }
+    
+    // Width එක 8න් බෙදෙන සංඛ්‍යාවක් විය යුතුය (ESC/POS standard)
+    cv.width = Math.ceil(w / 8) * 8;
+    cv.height = h;
+    
     const ctx=cv.getContext('2d');
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.drawImage(img,0,0,cv.width,cv.height);
-    const pw=Math.ceil(cv.width/8);const ph=cv.height;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.drawImage(img, (cv.width-w)/2, 0, w, h); // මැදට කර ඇඳීම
+    
+    const pw=Math.ceil(cv.width/8); const ph=cv.height;
     const data=ctx.getImageData(0,0,cv.width,cv.height).data;
     const bits=[];
     for(let y=0;y<ph;y++){
@@ -1071,18 +1081,13 @@ function logoEscPos(){
       }
     }
     const cmd=new Uint8Array(8+bits.length);
-    // GS v 0: [1D 76 30 00 pw_l pw_h ph_l ph_h ...data]
-    cmd[0]=0x1D;cmd[1]=0x76;cmd[2]=0x30;cmd[3]=0x00;
-    cmd[4]=pw&0xff;cmd[5]=(pw>>8)&0xff;
-    cmd[6]=ph&0xff;cmd[7]=(ph>>8)&0xff;
+    cmd[0]=0x1D; cmd[1]=0x76; cmd[2]=0x30; cmd[3]=0x00;
+    cmd[4]=pw&0xff; cmd[5]=(pw>>8)&0xff;
+    cmd[6]=ph&0xff; cmd[7]=(ph>>8)&0xff;
     bits.forEach((b,i)=>cmd[8+i]=b);
-    return[cmd,new Uint8Array([0x0A])]; // print + LF
+    return[cmd, new Uint8Array([0x0A])]; 
   }catch(e){return[];}
 }
-
-async function btPrint(){const chunks=buildPrintData();for(const c of chunks){try{if(pChar.properties.writeWithoutResponse)await pChar.writeValueWithoutResponse(c);else await pChar.writeValue(c);}catch(e){}await new Promise(r=>setTimeout(r,40));}}
-async function serialPrint(){const chunks=buildPrintData();for(const c of chunks){try{await pWriter.write(c);}catch(e){}await new Promise(r=>setTimeout(r,20));}}
-
 /* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>{setScBT(false);
       // Auto reconnect
