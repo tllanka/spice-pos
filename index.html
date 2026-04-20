@@ -747,12 +747,13 @@ async function idbPut(k,v){if(!_idb)return;return new Promise(res=>{const t=_idb
 async function idbGet(k){if(!_idb)return null;return new Promise(res=>{const t=_idb.transaction('h','readonly');const q=t.objectStore('h').get(k);q.onsuccess=()=>res(q.result?.v||null);q.onerror=()=>res(null);});}
 
 /* ══ INIT ══ */
+/* ══ INIT ══ */
 async function init(){
   await openIDB();
   await restoreBackupHandle();
   updHdr();updBanner();rGrid();rItmTbl();rCustTbl();ldShop();ldCFG();updRep();rSalTbl();updBkBar();
   document.addEventListener('click',e=>{if(!e.target.closest('.acw'))hideDrop();});
-  window.addEventListener('resize',rGrid);
+  // wi <--- මේක අයින් කරන්න
   document.getElementById('verBadge').textContent='v'+APP_VER;
 }
 init();
@@ -1149,7 +1150,7 @@ function buildXLSX(arr,sn){
     xlRow([xlCell('Grand Total (රු.)','String','TL'),xlCell(total,'Number','T')]),
   ];
   const dataRows=[xlRow(hdr.map(h=>xlCell(h,'String','H')),18)];
-  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items.length,'Number',e),xlCell(s.gt,'Number',g)],14));});
+  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items ? s.items.length : 0),xlCell(s.gt,'Number',g)],14));});
   dataRows.push(xlRow([xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('TOTAL','String','TL'),xlCell(total,'Number','T')]));
   const itemHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
   const itemRows=[xlRow(itemHdr.map(h=>xlCell(h,'String','H')),18)];
@@ -1189,135 +1190,81 @@ function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s===
 function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
 function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
 function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
-function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
+function restoreData(inp){
+  if(!inp.files[0])return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const raw=e.target.result;
+      let data;
+      try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}
+      if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}
+      if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;
+      if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}
+      if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}
+      if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}
+      if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}
+      if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}
+      ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');
+    }catch(err){toast('❌ '+err.message,'err');}
+  };
+  rd.readAsText(inp.files[0],'UTF-8');
+  inp.value='';
+}
 
 /* ══ UTILS ══ */
 function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 window.addEventListener('resize',rGrid);
-</script>
-</body>
-</html>/* ══ XLSX Export — SheetJS ══ */
+/* ══ XLSX Export — SheetJS ══ */
 function exDay(){
-  const td=new Date().toDateString(),d=SALES.filter(s=>new Date(s.date).toDateString()===td);
-  if(!d.length){toast('❌ No data','err');return;}
-  exportXLSX(d,'Daily_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
+  const td = new Date().toDateString();
+  const d = SALES.filter(s => new Date(s.date).toDateString() === td);
+  if(!d.length){ toast('❌ දත්ත නොමැත','err'); return; }
+  exportXLSX(d, 'Daily_Sales_' + new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
 }
+
 function exMonth(){
-  const m=new Date().getMonth()+'-'+new Date().getFullYear();
-  const d=SALES.filter(s=>{const dt=new Date(s.date);return(dt.getMonth()+'-'+dt.getFullYear())===m;});
-  if(!d.length){toast('❌ No data','err');return;}
-  exportXLSX(d,'Monthly_'+new Date().toLocaleString('en',{month:'long'})+'_'+new Date().getFullYear());
+  const m = new Date().getMonth() + '-' + new Date().getFullYear();
+  const d = SALES.filter(s => {
+    const dt = new Date(s.date);
+    return (dt.getMonth() + '-' + dt.getFullYear()) === m;
+  });
+  if(!d.length){ toast('❌ දත්ත නොමැත','err'); return; }
+  exportXLSX(d, 'Monthly_Sales_' + new Date().getFullYear());
 }
+
 function exAll(){
-  if(!SALES.length){toast('❌ No data','err');return;}
-  exportXLSX(SALES,'AllSales_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
+  if(!SALES.length){ toast('❌ දත්ත නොමැත','err'); return; }
+  exportXLSX(SALES, 'All_Sales');
 }
 
-function exportXLSX(arr, fname){
-  if(typeof XLSX==='undefined'){toast('❌ XLSX library load error','err');return;}
-  const wb=XLSX.utils.book_new();
+function exportXLSX(arr, fname) {
+  if (typeof XLSX === 'undefined') { toast('❌ XLSX library load error', 'err'); return; }
+  const wb = XLSX.utils.book_new();
 
-  // ── Sheet 1: Sales ─────────────────────────────
-  const salesHdr=['#','Invoice No','දිනය','ගනු','Phone','Items','Total (රු.)'];
-  const salesData=arr.map((s,i)=>[
-    i+1, s.invNo||'—',
-    new Date(s.date).toLocaleString('si-LK'),
-    s.cust, s.custPhone||'',
-    s.items.length,
+  const salesData = arr.map((s, i) => [
+    i + 1, 
+    s.invNo || '—', 
+    new Date(s.date).toLocaleString('si-LK'), 
+    s.cust, 
+    s.custPhone || '', 
+    s.items ? s.items.length : 0, 
     s.gt
   ]);
-  const totalRow=['','','','','','TOTAL', arr.reduce((s,x)=>s+x.gt,0)];
-  const ws1=XLSX.utils.aoa_to_sheet([salesHdr,...salesData,totalRow]);
-  // Column widths
-  ws1['!cols']=[{wch:4},{wch:12},{wch:20},{wch:18},{wch:14},{wch:7},{wch:14}];
-  // Style header row (bold bg)
-  const range1=XLSX.utils.decode_range(ws1['!ref']);
-  for(let c=range1.s.c;c<=range1.e.c;c++){
-    const cell=ws1[XLSX.utils.encode_cell({r:0,c})];
-    if(cell){cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'8B3A0F'}},alignment:{horizontal:'center'}};}
-  }
-  // Total row bold
-  const lastR=salesData.length+1;
-  for(let c=0;c<=6;c++){
-    const cell=ws1[XLSX.utils.encode_cell({r:lastR,c})];
-    if(cell){cell.s={font:{bold:true},fill:{fgColor:{rgb:'FFE0C8'}}};}
-  }
-  XLSX.utils.book_append_sheet(wb,ws1,'Sales');
 
-  // ── Sheet 2: Item Details ──────────────────────
-  const itmHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
-  const itmData=[];
-  arr.forEach(s=>s.items.forEach(it=>itmData.push([
-    s.invNo||'—',
-    new Date(s.date).toLocaleDateString('si-LK'),
-    s.cust, it.name,
-    it.eng||si2rom(it.name)||'',
-    it.w, it.price, it.tot
-  ])));
-  const ws2=XLSX.utils.aoa_to_sheet([itmHdr,...itmData]);
-  ws2['!cols']=[{wch:12},{wch:16},{wch:18},{wch:20},{wch:16},{wch:10},{wch:12},{wch:13}];
-  const range2=XLSX.utils.decode_range(ws2['!ref']);
-  for(let c=range2.s.c;c<=range2.e.c;c++){
-    const cell=ws2[XLSX.utils.encode_cell({r:0,c})];
-    if(cell){cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'8B3A0F'}}};}
-  }
-  XLSX.utils.book_append_sheet(wb,ws2,'Item Details');
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['#', 'Invoice No', 'දිනය', 'ගනුදෙනුකරු', 'දුරකතනය', 'භාණ්ඩ ගණන', 'මුළු මුදල (රු.)'],
+    ...salesData
+  ]);
 
-  // ── Sheet 3: Summary ───────────────────────────
-  const total=arr.reduce((s,x)=>s+x.gt,0);
-  const smryData=[
-    ['කඩ නම', SHOP.sin||''],
-    ['Shop', SHOP.eng||''],
-    ['Address', SHOP.addr||''],
-    ['Phone', SHOP.tel||''],
-    ['Version','v'+APP_VER],
-    ['Export Date', new Date().toLocaleString('si-LK')],
-    ['Total Records', arr.length],
-    ['Grand Total (රු.)', total],
-  ];
-  const ws3=XLSX.utils.aoa_to_sheet(smryData);
-  ws3['!cols']=[{wch:20},{wch:30}];
-  XLSX.utils.book_append_sheet(wb,ws3,'Summary');
-
-  // ── Download ───────────────────────────────────
-  XLSX.writeFile(wb, fname+'.xlsx');
-  toast('✅ XLSX saved','ok');
+  XLSX.utils.book_append_sheet(wb, ws1, 'Sales Report');
+  XLSX.writeFile(wb, fname + '.xlsx');
+  toast('✅ XLSX ගොනුව සුරැකිණි', 'ok');
 }
 
-/* ══ BACKUP — IndexedDB persist ══ */
-async function restoreBackupHandle(){
-  if(!CFG.autoBackup)return;
-  try{
-    const h=await idbGet('bkH');
-    if(h&&h.queryPermission){const p=await h.queryPermission({mode:'readwrite'});if(p==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File remembered: '+h.name;return;}const r=await h.requestPermission({mode:'readwrite'});if(r==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;return;}}
-    const dh=await idbGet('bkD');
-    if(dh&&dh.queryPermission){const p=await dh.queryPermission({mode:'readwrite'});if(p==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}const r=await dh.requestPermission({mode:'readwrite'});if(r==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}}
-  }catch(e){console.log('Handle restore:',e);}
-}
-function updBkBar(){const dot=document.getElementById('bkDot');const txt=document.getElementById('bkTxt');if(!bkupHandle&&!bkupDir&&!CFG.autoBackup){dot.className='bk-dot';txt.textContent='Backup: Setup නොවිණි';}else if(bkupHandle||bkupDir){dot.className='bk-dot ok';txt.textContent='Auto Backup: ✅ Ready';}else{dot.className='bk-dot';txt.textContent='Auto Backup: On (Folder නොමැත)';}}
-async function setupBkupFolder(){
-  if(window.showSaveFilePicker){
-    try{const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');const h=await window.showSaveFilePicker({suggestedName:sn+'_backup.json',types:[{description:'JSON',accept:{'application/json':['.json']}}],startIn:'downloads'});bkupHandle=h;await idbPut('bkH',h);updBkBar();toast('✅ Backup file set','ok');document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;await doWriteBackup();}catch(e){if(e.name!=='AbortError')toast('❌ '+e.message,'err');}
-  } else if(window.showDirectoryPicker){
-    try{let dir=await window.showDirectoryPicker({mode:'readwrite',startIn:'downloads'});const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');try{dir=await dir.getDirectoryHandle(sn,{create:true});}catch(e){}bkupDir=dir;await idbPut('bkD',dir);updBkBar();toast('✅ Folder set','ok');document.getElementById('bkFolderStatus').textContent='✅ Folder set';await doWriteBackup();}catch(e){toast('❌ '+e.message,'err');}
-  } else{toast('⚠️ Manual backup use කරන්න','err');}
-}
-async function doWriteBackup(){
-  const json=getAllDataJSON();
-  if(bkupHandle){try{const w=await bkupHandle.createWritable();await w.write(json);await w.close();setBkBar('ok','✅ Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Bkup:',e);}}
-  else if(bkupDir){try{const fh=await bkupDir.getFileHandle('pos_backup.json',{create:true});const w=await fh.createWritable();await w.write(json);await w.close();try{const dd=await bkupDir.getDirectoryHandle('daily',{create:true});const df=await dd.getFileHandle('bk_'+new Date().toISOString().slice(0,10)+'.json',{create:true});const dw=await df.createWritable();await dw.write(json);await dw.close();}catch(e){}setBkBar('ok','✅ Auto Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Dir bkup:',e);}}
-}
-function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s==='ok'?' ok':s==='saving'?' saving':'');document.getElementById('bkTxt').textContent=m;}
-function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
-function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
-function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
-function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
-
-/* ══ UTILS ══ */
-function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
-let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
-window.addEventListener('resize',rGrid);
+// ══ EVENT LISTENERS ══
+window.addEventListener('resize', rGrid);
 </script>
 </body>
 </html>
