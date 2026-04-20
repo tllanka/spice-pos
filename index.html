@@ -1065,43 +1065,46 @@ function buildPrintData() {
   const shopN = SHOP.eng || si2rom(SHOP.sin) || 'SPICE SHOP';
 
   const chunks = [
-    new Uint8Array([E, 0x40]),                          // 1. Printer එක මුල සිට ආරම්භ කරන්න (Reset)
+    new Uint8Array([E, 0x40]),                          // Printer එක මුල සිට (Reset)
     
     // --- Header ---
-    new Uint8Array([E, 0x61, 1]),                       // මැදට (Center)
+    new Uint8Array([E, 0x61, 1]),                       // Center
     ...logoEscPos(),                                   
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode(shopN + '\n'),
+    enc.encode(shopN + '\r\n'),
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
-    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\n') : null,
-    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
-    enc.encode('--------------------------------\n'),
+    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\r\n') : null,
+    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\r\n') : null,
+    enc.encode('--------------------------------\r\n'),
     
     // --- Items ---
-    new Uint8Array([E, 0x61, 0]),                       // වමට (Left)
-    enc.encode('Inv: ' + (sale?.invNo || '—') + '\n'),
-    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
-    enc.encode('--------------------------------\n'),
+    new Uint8Array([E, 0x61, 0]),                       // Left Align
+    enc.encode('Inv: ' + (sale?.invNo || '—') + '\r\n'),
+    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\r\n'),
+    enc.encode('--------------------------------\r\n'),
     
     ...inv.map(l => {
       const nm = l.item.eng || si2rom(l.item.sin);
-      return enc.encode(`${nm}\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
+      return enc.encode(`${nm}\r\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\r\n`);
     }),
-    enc.encode('--------------------------------\n'),
+    enc.encode('--------------------------------\r\n'),
     
-    // --- TOTAL ---
+    // --- TOTAL (මෙතනයි වැදගත්ම කොටස) ---
     new Uint8Array([E, 0x61, 1]),                       // මැදට (Center)
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
+    enc.encode('TOTAL: Rs.' + fmt(gt)),                // වචන ටික මුද්‍රණය කළා
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // --- පේළි කිහිපයක් පහළට ගැනීම (Buffer එක නිදහස් කිරීමට) ---
-    new Uint8Array([0x0A]),                             // පේළියක් පනින්න
+    // *** පේළි වෙන් කිරීමට බල කරන (Force Feed) Command එක ***
+    new Uint8Array([E, 0x64, 2]),                       // පේළි 2ක් අනිවාර්යයෙන්ම පහළට තල්ලු කරන්න (ESC d 2)
     
-    // --- THANK YOU (සරලව) ---
-    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
-    enc.encode('\nThank You!\n\n\n'),
-    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
+    // --- THANK YOU ---
+    new Uint8Array([E, 0x61, 1]),                       // නැවත මැදට (Center)
+    enc.encode('THANK YOU'),                            // වචන ටික මුද්‍රණය කළා
+    
+    // අවසාන වශයෙන් පේළි 5ක් තල්ලු කර කඩදාසිය නවත්වන්න
+    new Uint8Array([E, 0x64, 5]),                       
+    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           
   ];
   
   return chunks.filter(Boolean);
