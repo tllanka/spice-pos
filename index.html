@@ -1025,12 +1025,11 @@ function actualPrint(){
     setTimeout(() => { window.print(); }, 500); 
   }
 }
-/* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Commands) ══ */
+/* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Thermal Printer Commands) ══ */
 function buildPrintData(){
   const E = 0x1B, G = 0x1D;
   const sale = SALES[SALES.length - 1];
   const invNo = sale?.invNo || '—';
-  const cust = document.getElementById('cust').value.trim();
   const gt = inv.reduce((s, l) => s + l.tot, 0);
   const is80 = (CFG.paper || '58') === '80';
   const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
@@ -1040,15 +1039,14 @@ function buildPrintData(){
     new Uint8Array([E, 0x40]),                          // Reset
     new Uint8Array([E, 0x61, 1]),                       // Center
     ...logoEscPos(),                                   // Logo
-    new Uint8Array([G, 0x21, 0x11]),                    // Shop Name: Large & Bold
+    new Uint8Array([G, 0x21, 0x11]),                    // Font: Double Height & Width (මහත් අකුරු)
     enc.encode(shopN + '\n'),
-    new Uint8Array([G, 0x21, 0x00]),                    // Normal Size
+    new Uint8Array([G, 0x21, 0x00]),                    // Normal Font
     SHOP.addr ? enc.encode(SHOP.addr + '\n') : null,
     SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
     enc.encode('--------------------------------\n'),
-    new Uint8Array([E, 0x61, 0]),                       // Left
+    new Uint8Array([E, 0x61, 0]),                       // Left Align
     enc.encode('Inv: ' + invNo + '  Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
-    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + cust + '\n') : null,
     enc.encode('--------------------------------\n'),
     ...inv.map(l => {
       const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
@@ -1056,11 +1054,11 @@ function buildPrintData(){
     }),
     enc.encode('--------------------------------\n'),
     new Uint8Array([E, 0x61, 1]),                       // Center
-    new Uint8Array([G, 0x21, 0x01]),                    // TOTAL: Double Width (Bold) but Normal Height
+    new Uint8Array([G, 0x21, 0x11]),                    // Total එක මහත් අකුරින්
     enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
-    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
+    new Uint8Array([G, 0x21, 0x00]),                    // Reset size
     enc.encode('\nThank You! ආයිත් එන්න!\n\n\n'),
-    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
+    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Paper Cut
   ];
   return chunks.filter(Boolean);
 }
