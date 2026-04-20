@@ -1056,56 +1056,58 @@ ${inv.map(l => {
 }
 
 /* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Commands) ══ */
-function buildPrintData(){
+function buildPrintData() {
   const E = 0x1B, G = 0x1D;
   const sale = SALES[SALES.length - 1];
-  const invNo = sale?.invNo || '—';
-  const cust = document.getElementById('cust').value.trim();
   const gt = inv.reduce((s, l) => s + l.tot, 0);
-  const is80 = (CFG.paper || '58') === '80';
-  const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
   const enc = new TextEncoder();
 
+  // Shop name එක සිංහල නම් ඉංග්‍රීසියට හරවන්න (Printer එකට සිංහල බැරි නිසා)
+  const shopN = SHOP.eng || si2rom(SHOP.sin) || 'SPICE SHOP';
+  const footerText = "Thank You! Ayith Enna!"; // සිංහල අකුරු අයින් කර Singlish යොදා ඇත
+
   const chunks = [
-    new Uint8Array([E, 0x40]),                          // Reset
-    new Uint8Array([E, 0x61, 1]),                       // Center
+    new Uint8Array([E, 0x40]),                          // Reset Printer
+    new Uint8Array([E, 0x61, 1]),                       // Center Align
     ...logoEscPos(),                                   // Logo
-    new Uint8Array([G, 0x21, 0x11]),                    // Shop Name: Large & Bold
+    new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
+    new Uint8Array([G, 0x21, 0x01]),                    // Double Width (More compatible than 0x11)
     enc.encode(shopN + '\n'),
     new Uint8Array([G, 0x21, 0x00]),                    // Normal Size
-    SHOP.addr ? enc.encode(SHOP.addr + '\n') : null,
+    new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
+    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\n') : null,
     SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
     enc.encode('--------------------------------\n'),
-    new Uint8Array([E, 0x61, 0]),                       // Left
-    enc.encode('Inv: ' + invNo + '  Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
-    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + cust + '\n') : null,
+    new Uint8Array([E, 0x61, 0]),                       // Left Align
+    enc.encode('Inv: ' + (sale?.invNo || '—') + '\n'),
+    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
     enc.encode('--------------------------------\n'),
     ...inv.map(l => {
-      const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
-      return enc.encode(`${nm}\n  ${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
+      const nm = l.item.eng || si2rom(l.item.sin);
+      return enc.encode(`${nm}\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
     }),
     enc.encode('--------------------------------\n'),
-    new Uint8Array([E, 0x61, 1]),                       // Center
-    new Uint8Array([G, 0x21, 0x01]),                    // TOTAL: Double Width (Bold) but Normal Height
+    new Uint8Array([E, 0x61, 1]),                       // Center Align
+    new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
     enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
-    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
-    enc.encode('\nThank You! ආයිත් එන්න!\n\n\n'),
-    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
+    new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
+    enc.encode('\n' + footerText + '\n\n\n'),          // Footer without Sinhala
+    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           // Paper Cut / Feed
   ];
   return chunks.filter(Boolean);
 }
 
 /* ══ ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
-function logoEscPos(){
-  if(!SHOP.logo) return [];
+function logoEscPos() {
+  if (!SHOP.logo) return [];
   try {
     const img = new Image();
     img.src = SHOP.logo;
     const is80 = (CFG.paper || '58') === '80';
     
-    // ප්‍රින්ටරයට ආරක්ෂිත පළල (Safe Width)
-    const maxW = is80 ? 384 : 240;
-    const maxH = 150; 
+    // Printer එකට ආරක්ෂිත පළල (Width must be multiple of 8)
+    const maxW = is80 ? 384 : 256; 
+    const maxH = 120; 
 
     const cv = document.createElement('canvas');
     const aspect = img.naturalWidth / img.naturalHeight || 1;
@@ -1114,6 +1116,7 @@ function logoEscPos(){
     let h = Math.round(maxW / aspect);
     if (h > maxH) { h = maxH; w = Math.round(maxH * aspect); }
     
+    // පළල අනිවාර්යයෙන්ම 8න් බෙදිය හැකි විය යුතුයි
     cv.width = Math.ceil(w / 8) * 8; 
     cv.height = h;
     
@@ -1141,11 +1144,9 @@ function logoEscPos(){
     }
     
     const cmd = new Uint8Array(8 + bits.length);
-    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
-    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
-    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
-    bits.forEach((b, i) => cmd[8 + i] = b);
-    return [cmd, new Uint8Array([0x0A])];
+    cmd.set([0x1D, 0x76, 0x30, 0x00, pw & 0xFF, (pw >> 8) & 0xFF, ph & 0xFF, (ph >> 8) & 0xFF]);
+    cmd.set(bits, 8);
+    return [cmd, new Uint8Array([0x0A])]; // Line feed after logo
   } catch (e) { return []; }
 }
 /* ══ BT SCALE ══ */
