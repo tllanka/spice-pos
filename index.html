@@ -950,143 +950,140 @@ function triggerSMSOpen(phone){
   }
 }
 
-/* ══ 1. පද්ධතියෙන් පෙන්වන ප්‍රිවීව් එක (PDF/Browser Print) ══ */
+/* ══ 3. ප්‍රිවීව් එක (Browser Print) ══ */
 function buildPzone(){
-  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
-  const ds=new Date(sale?.date||Date.now()).toLocaleDateString('en-GB');
-  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const paper=CFG.paper||'58';
-  const is80=paper==='80';
+  const sale = SALES[SALES.length - 1];
+  const ds = new Date(sale?.date || Date.now()).toLocaleDateString('en-GB');
+  const cust = document.getElementById('cust').value.trim();
+  const gt = inv.reduce((s, l) => s + l.tot, 0);
+  const is80 = (CFG.paper || '58') === '80';
+  const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
 
-  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
-  const foot='Thank you..!';
+  const logoHtml = SHOP.logo ? `<img src="${SHOP.logo}" style="max-height:80px; width:auto; display:block; margin:0 auto 8px; filter:grayscale(1) contrast(1.4);">` : '';
 
-  // Preview එකේ ලෝගෝ එක තවත් විශාල කරන ලදී
-  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?120:90}px; width:auto; display:block; margin:0 auto 8px; filter:grayscale(1) contrast(1.4)">`:'';
-
-  document.getElementById('pzone').innerHTML=`
+  document.getElementById('pzone').innerHTML = `
 <style>
-@page{size:${is80?'80mm':'58mm'} auto; margin:0}
-#pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0 auto; padding:4px; color:black; background:white;}
-.pz-c{text-align:center; width:100%;}
-.pz-shop{font-size:${is80?22:18}px; font-weight:bold; text-transform:uppercase; margin-bottom:2px;}
-.pz-d{border-top:1px dashed #333; margin:4px 0}
-.pz-r{display:flex; justify-content:space-between}
-.pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:${is80?18:15}px; padding:4px 0; border-top:1px solid black; border-bottom:1px solid black; margin-top:5px;}
-.pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px}
+@page{size:${is80 ? '80mm' : '58mm'} auto; margin:0;}
+#pzone{font-family:'Courier New',monospace; width:${is80 ? '72mm' : '50mm'}; margin:0 auto; padding:5px; color:black; background:white;}
+.pz-c{text-align:center;}
+.pz-shop{font-size:20px; font-weight:bold; text-transform:uppercase;}
+.pz-d{border-top:1px dashed #000; margin:5px 0;}
+.pz-tot{display:flex; justify-content:space-between; font-weight:bold; font-size:16px; padding:4px 0; border-top:1px solid #000; border-bottom:1px solid #000; margin-top:5px;}
 </style>
 <div class="pz-c">
   ${logoHtml}
   <div class="pz-shop">${shopN}</div>
-  ${SHOP.eng&&is80?`<div>${SHOP.eng}</div>`:''}
-  ${SHOP.addr?`<div>${SHOP.addr}</div>`:''}
-  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}
+  <div style="font-size:11px;">${SHOP.addr} ${SHOP.tel ? 'Tel:' + SHOP.tel : ''}</div>
 </div>
 <div class="pz-d"></div>
-<div class="pz-r"><span>Invoice:</span><span>${invNo}</span></div>
-<div class="pz-r"><span>Date:</span><span>${ds}</span></div>
-${cust&&cust!=='Anonymous'?`<div class="pz-r"><span>Customer:</span><span>${cust}</span></div>`:''}
-${curCustPh?`<div class="pz-r"><span>Phone:</span><span>${curCustPh}</span></div>`:''}
+<div style="display:flex; justify-content:space-between; font-size:12px;">
+  <span>Date: ${ds}</span><span>Inv: ${sale?.invNo || '—'}</span>
+</div>
 <div class="pz-d"></div>
-${inv.map(l=>{const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):( l.item.eng||si2rom(l.item.sin));return`<div style="font-weight:bold">${nm}</div><div class="pz-r"><span>${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`}).join('')}
-<div class="pz-d"></div>
+${inv.map(l => {
+  const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
+  return `<div style="font-weight:bold; font-size:13px;">${nm}</div>
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span>${l.w.toFixed(3)}kg x ${fmt(l.item.price)}</span><span>${fmt(l.tot)}</span>
+          </div>`;
+}).join('')}
 <div class="pz-tot"><span>TOTAL</span><span>Rs.${fmt(gt)}</span></div>
-<div class="pz-d"></div>
-<div class="pz-f">${foot}</div>`;
+<div style="text-align:center; margin-top:10px; font-size:11px;">Thank You! ආයිත් එන්න!</div>`;
 }
 
-/* ══ 2. තාප මුද්‍රණ යන්ත්‍රය (Thermal Printer) සඳහා Commands ══ */
+/* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Commands) ══ */
 function buildPrintData(){
-  const E=0x1B, G=0x1D;
-  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
-  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const is80=(CFG.paper||'58')==='80';
-  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
-  const foot='Thank you..!';
+  const E = 0x1B, G = 0x1D;
+  const sale = SALES[SALES.length - 1];
+  const invNo = sale?.invNo || '—';
+  const cust = document.getElementById('cust').value.trim();
+  const gt = inv.reduce((s, l) => s + l.tot, 0);
+  const is80 = (CFG.paper || '58') === '80';
+  const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
+  const enc = new TextEncoder();
 
-  const enc=new TextEncoder();
-  const chunks=[
-    new Uint8Array([E,0x40]),                          // Init
-    new Uint8Array([E,0x61,1]),                         // Center align
-    ...logoEscPos(),                                   // Logo (Centered automatically)
-    new Uint8Array([G,0x21,0x11]),                      // කඩේ නම: Double height + Double width
-    enc.encode(shopN+'\n'),
-    new Uint8Array([G,0x21,0x00]),                      // Normal size reset
-    SHOP.eng&&is80?enc.encode(SHOP.eng+'\n'):null,
-    SHOP.addr?enc.encode(SHOP.addr+'\n'):null,
-    SHOP.tel?enc.encode('Tel:'+SHOP.tel+'\n'):null,
-    enc.encode('================================\n'),
-    new Uint8Array([E,0x61,0]),                         // Left align
-    enc.encode('Invoice:'+invNo+' '+new Date().toLocaleDateString('en-GB')+'\n'),
-    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+'\n'):null,
+  const chunks = [
+    new Uint8Array([E, 0x40]),                          // Reset
+    new Uint8Array([E, 0x61, 1]),                       // Center
+    ...logoEscPos(),                                   // Logo
+    new Uint8Array([G, 0x21, 0x11]),                    // Shop Name: Large & Bold
+    enc.encode(shopN + '\n'),
+    new Uint8Array([G, 0x21, 0x00]),                    // Normal Size
+    SHOP.addr ? enc.encode(SHOP.addr + '\n') : null,
+    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
     enc.encode('--------------------------------\n'),
-    ...inv.map(l=>{
-      const nm=is80?l.item.sin:(l.item.eng||si2rom(l.item.sin));
-      return enc.encode(`${nm}\n  ${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\n`);
+    new Uint8Array([E, 0x61, 0]),                       // Left
+    enc.encode('Inv: ' + invNo + '  Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
+    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + cust + '\n') : null,
+    enc.encode('--------------------------------\n'),
+    ...inv.map(l => {
+      const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
+      return enc.encode(`${nm}\n  ${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
     }),
-    enc.encode('================================\n'),
-    new Uint8Array([E,0x61,1]),                         // Center align
-    new Uint8Array([G,0x21,0x01]),                      // TOTAL: Double WIDTH පමණි (උස පොඩියි, මහත වැඩියි)
-    enc.encode('Total: Rs.'+fmt(gt)+'\n'),
-    new Uint8Array([G,0x21,0]),                         // Reset size
-    enc.encode('\n'),
-    enc.encode(foot+'\n\n\n'),
-    new Uint8Array([G,0x56,0x41,0x10]),                 // Cut
+    enc.encode('--------------------------------\n'),
+    new Uint8Array([E, 0x61, 1]),                       // Center
+    new Uint8Array([G, 0x21, 0x01]),                    // TOTAL: Double Width (Bold) but Normal Height
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
+    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
+    enc.encode('\nThank You! ආයිත් එන්න!\n\n\n'),
+    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
   ];
   return chunks.filter(Boolean);
 }
 
+/* ══ 1. ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
 function logoEscPos(){
-  if(!SHOP.logo)return[];
-  try{
-    const img=new Image(); img.src=SHOP.logo;
-    const is80=(CFG.paper||'58')==='80';
+  if(!SHOP.logo) return [];
+  try {
+    const img = new Image();
+    img.src = SHOP.logo;
+    const is80 = (CFG.paper || '58') === '80';
     
-    // ලෝගෝවේ පළල ප්‍රින්ටරයේ උපරිමයටම වැඩි කරන ලදී
-    // 58mm සඳහා 360px සහ 80mm සඳහා 552px (Multiple of 8)
-    const maxW = is80 ? 552 : 360; 
-    const maxH = 200; // උසත් මඳක් වැඩි කරන ලදී
+    // ප්‍රින්ටරයට දරාගත හැකි උපරිම ආරක්ෂිත පළල (Safe Width)
+    // 58mm සඳහා 240px | 80mm සඳහා 384px
+    const maxW = is80 ? 384 : 240;
+    const maxH = 150; 
+
+    const cv = document.createElement('canvas');
+    const aspect = img.naturalWidth / img.naturalHeight || 1;
     
-    const cv=document.createElement('canvas');
-    const aspect=img.naturalWidth/img.naturalHeight||1;
-    
-    // ප්‍රමාණය ගණනය කිරීම
     let w = maxW;
     let h = Math.round(maxW / aspect);
     if (h > maxH) { h = maxH; w = Math.round(maxH * aspect); }
     
-    // Width එක 8න් බෙදෙන සංඛ්‍යාවක් විය යුතුය (ESC/POS standard)
-    cv.width = Math.ceil(w / 8) * 8;
+    cv.width = Math.ceil(w / 8) * 8; // Width must be multiple of 8
     cv.height = h;
     
-    const ctx=cv.getContext('2d');
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.drawImage(img, (cv.width-w)/2, 0, w, h); // මැදට කර ඇඳීම
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, (cv.width - w) / 2, 0, w, h);
     
-    const pw=Math.ceil(cv.width/8); const ph=cv.height;
-    const data=ctx.getImageData(0,0,cv.width,cv.height).data;
-    const bits=[];
-    for(let y=0;y<ph;y++){
-      for(let bx=0;bx<pw;bx++){
-        let byte=0;
-        for(let b=0;b<8;b++){
-          const x=bx*8+b;
-          if(x<cv.width){
-            const i=(y*cv.width+x)*4;
-            const gray=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
-            if(gray<128)byte|=(0x80>>b);
-          }
+    const pw = cv.width / 8;
+    const ph = cv.height;
+    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    const bits = [];
+    
+    for (let y = 0; y < ph; y++) {
+      for (let bx = 0; bx < pw; bx++) {
+        let byte = 0;
+        for (let b = 0; b < 8; b++) {
+          const x = bx * 8 + b;
+          const i = (y * cv.width + x) * 4;
+          const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+          if (gray < 128) byte |= (0x80 >> b);
         }
         bits.push(byte);
       }
     }
-    const cmd=new Uint8Array(8+bits.length);
-    cmd[0]=0x1D; cmd[1]=0x76; cmd[2]=0x30; cmd[3]=0x00;
-    cmd[4]=pw&0xff; cmd[5]=(pw>>8)&0xff;
-    cmd[6]=ph&0xff; cmd[7]=(ph>>8)&0xff;
-    bits.forEach((b,i)=>cmd[8+i]=b);
-    return[cmd, new Uint8Array([0x0A])]; 
-  }catch(e){return[];}
+    
+    const cmd = new Uint8Array(8 + bits.length);
+    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
+    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
+    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
+    bits.forEach((b, i) => cmd[8 + i] = b);
+    return [cmd, new Uint8Array([0x0A])];
+  } catch (e) { return []; }
 }
 /* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>{setScBT(false);
