@@ -1063,13 +1063,12 @@ function buildPrintData() {
   const enc = new TextEncoder();
 
   const shopN = SHOP.eng || si2rom(SHOP.sin) || 'SPICE SHOP';
-  const footerText = "Thank You ...!"; 
 
   const chunks = [
-    new Uint8Array([E, 0x40]),                          // 1. Printer Reset
+    new Uint8Array([E, 0x40]),                          // 1. Printer එක මුල සිට ආරම්භ කරන්න (Reset)
     
     // --- Header ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
+    new Uint8Array([E, 0x61, 1]),                       // මැදට (Center)
     ...logoEscPos(),                                   
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
     enc.encode(shopN + '\n'),
@@ -1079,7 +1078,7 @@ function buildPrintData() {
     enc.encode('--------------------------------\n'),
     
     // --- Items ---
-    new Uint8Array([E, 0x61, 0]),                       // Left Align
+    new Uint8Array([E, 0x61, 0]),                       // වමට (Left)
     enc.encode('Inv: ' + (sale?.invNo || '—') + '\n'),
     enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
     enc.encode('--------------------------------\n'),
@@ -1090,17 +1089,21 @@ function buildPrintData() {
     }),
     enc.encode('--------------------------------\n'),
     
-    // --- TOTAL (පේළිය අවසානයේ New Line එකක් සහිතව) ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
+    // --- TOTAL ---
+    new Uint8Array([E, 0x61, 1]),                       // මැදට (Center)
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),         // පේළිය අවසන් කළා
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // --- Thank You (පේළි දෙකක් පහළින් මුද්‍රණය වීමට) ---
-    enc.encode('\n'),                                   // අමතර හිස් පේළියක් (Space)
-    enc.encode(footerText + '\n\n\n\n'),               // Thank You සහ කඩදාසිය ඉහළට තල්ලු කිරීම
+    // --- පේළි කිහිපයක් පහළට ගැනීම (Buffer එක නිදහස් කිරීමට) ---
+    new Uint8Array([0x0A]),                             // පේළියක් පනින්න
     
-    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           // Paper Cut Command
+    // --- THANK YOU (සරලව) ---
+    new Uint8Array([E, 0x61, 1]),                       // නැවත මැදට ගෙන එන්න
+    enc.encode('THANK YOU'),                            // තිත් ලකුණු රහිතව සරලව
+    new Uint8Array([0x0A, 0x0A, 0x0A, 0x0A]),           // පේළි 4ක් පනින්න
+    
+    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           // කඩදාසිය තල්ලු කරන්න
   ];
   
   return chunks.filter(Boolean);
