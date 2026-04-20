@@ -747,12 +747,13 @@ async function idbPut(k,v){if(!_idb)return;return new Promise(res=>{const t=_idb
 async function idbGet(k){if(!_idb)return null;return new Promise(res=>{const t=_idb.transaction('h','readonly');const q=t.objectStore('h').get(k);q.onsuccess=()=>res(q.result?.v||null);q.onerror=()=>res(null);});}
 
 /* ══ INIT ══ */
+/* ══ INIT ══ */
 async function init(){
   await openIDB();
   await restoreBackupHandle();
   updHdr();updBanner();rGrid();rItmTbl();rCustTbl();ldShop();ldCFG();updRep();rSalTbl();updBkBar();
   document.addEventListener('click',e=>{if(!e.target.closest('.acw'))hideDrop();});
-  window.addEventListener('resize',rGrid);
+  // wi <--- මේක අයින් කරන්න
   document.getElementById('verBadge').textContent='v'+APP_VER;
 }
 init();
@@ -902,11 +903,26 @@ function newInv(){resetInv();gp('pos');toast('✅ නව Invoice','ok');}
 /* ══ PRINT PREVIEW ══ */
 function showPrintPreview(){document.getElementById('pmdoc').innerHTML=buildInvHTML();document.getElementById('pmInfo').style.display='none';document.getElementById('pmovl').classList.add('show');}
 function closePrintPreview(){document.getElementById('pmovl').classList.remove('show');}
-function actualPrint(){
+/* ══ මුද්‍රණය ආරම්භ කරන ප්‍රධාන Function එක (Async එකතු කර ඇත) ══ */
+async function actualPrint(){
   buildPzone();
-  if(pDev&&pDev.gatt?.connected&&pChar){btPrint().catch(()=>window.print());}
-  else if(pPort&&pWriter){serialPrint().catch(()=>window.print());}
-  else window.print();
+  
+  // ලෝගෝව පින්තූරයක් ලෙස කියවන තෙක් සුළු මොහොතක් රැඳී සිටීම
+  if(SHOP.logo) {
+    const img = new Image();
+    img.src = SHOP.logo;
+    await new Promise(res => { img.onload = res; img.onerror = res; });
+  }
+
+  if(pDev && pDev.gatt?.connected && pChar){
+    btPrint().catch(() => window.print());
+  }
+  else if(pPort && pWriter){
+    serialPrint().catch(() => window.print());
+  }
+  else {
+    window.print();
+  }
 }
 
 /* ══ SMS OPEN (opens app with pre-filled message) ══ */
@@ -949,160 +965,152 @@ function triggerSMSOpen(phone){
   }
 }
 
-/* ══ PRINT ZONE — paper size aware, logo, Sinhala ══ */
+/* ══ 3. ප්‍රිවීව් එක (Browser Print) ══ */
 function buildPzone(){
-  const sale=SALES[SALES.length-1];
-  const invNo=sale?.invNo||'—';
-  const ds=new Date(sale?.date||Date.now()).toLocaleDateString('en-GB');
-  const cust=document.getElementById('cust').value.trim();
-  const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const is80=(CFG.paper||'58')==='80';
-  // Names
-  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
-  const addr=SHOP.addr||'';
-  const tel=SHOP.tel||'';
-  // Paper widths in mm: 58mm usable ~48mm, 80mm usable ~72mm
-  const pxW=is80?304:192; // pixel width for logo (at 96dpi: 80mm=302px, 58mm=218px approx)
-  const logoHtml=SHOP.logo
-    ?`<img src="${SHOP.logo}" style="width:100%;max-width:${pxW}px;height:auto;display:block;margin:0 auto 4px;filter:grayscale(1) contrast(1.4)">`
-    :'';
-  const nameSize=is80?'15px':'13px';
-  const bodySize=is80?'12px':'10px';
-  const totalSize=is80?'14px':'12px';
+  const sale = SALES[SALES.length - 1];
+  const ds = new Date(sale?.date || Date.now()).toLocaleDateString('en-GB');
+  const gt = inv.reduce((s, l) => s + l.tot, 0);
+  const is80 = (CFG.paper || '58') === '80';
+  const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
 
-  document.getElementById('pzone').innerHTML=`
+  const logoHtml = SHOP.logo ? `<img src="${SHOP.logo}" style="max-height:80px; width:auto; display:block; margin:0 auto 8px; filter:grayscale(1) contrast(1.4);">` : '';
+
+  document.getElementById('pzone').innerHTML = `
 <style>
-@page{size:${is80?'80mm':'58mm'} auto;margin:0}
-body,html{margin:0;padding:0}
-#pzone{
-  font-family:'Courier New',monospace;
-  font-size:${bodySize};
-  width:${is80?'72mm':'50mm'};
-  margin:0 auto;
-  padding:3px 4px 2px;
-  background:#fff;
-  color:#000;
-}
-.c{text-align:center;width:100%}
-.b{font-weight:700}
-.d{border-top:1px dashed #000;margin:3px 0}
-.r{display:flex;justify-content:space-between;margin:1px 0}
-.tot{display:flex;justify-content:space-between;margin:2px 0;font-size:${totalSize};font-weight:900}
-.sm{font-size:${is80?'10px':'9px'};text-align:center}
+@page{size:${is80 ? '80mm' : '58mm'} auto; margin:0;}
+#pzone{font-family:'Courier New',monospace; width:${is80 ? '72mm' : '50mm'}; margin:0 auto; padding:5px; color:black; background:white;}
+.pz-c{text-align:center;}
+.pz-shop{font-size:20px; font-weight:bold; text-transform:uppercase; margin-bottom:4px;}
+.pz-d{border-top:1px dashed #000; margin:5px 0;}
+.pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:15px; padding:3px 0; border-top:1px solid #000; border-bottom:1px solid #000; margin-top:5px;}
 </style>
-<div id="pzone">
-<div class="c">${logoHtml}</div>
-<div class="c b" style="font-size:${nameSize};margin-bottom:1px">${shopN}</div>
-${SHOP.eng&&is80?`<div class="c" style="font-size:10px">${SHOP.eng}</div>`:''}
-${addr?`<div class="c sm">${addr}</div>`:''}
-${tel?`<div class="c sm">Tel: ${tel}</div>`:''}
-<div class="d"></div>
-<div class="r"><span>Invoice:</span><span>${invNo}</span></div>
-<div class="r"><span>Date:</span><span>${ds}</span></div>
-${cust&&cust!=='Anonymous'?`<div class="r"><span>Customer:</span><span>${cust}</span></div>`:''}
-${curCustPh?`<div class="r"><span>Phone:</span><span>${curCustPh}</span></div>`:''}
-<div class="d"></div>
-${inv.map(l=>{
-  const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):(l.item.eng||si2rom(l.item.sin));
-  return`<div class="b">${nm}</div>`+
-         `<div class="r"><span>${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`;
+<div class="pz-c">
+  ${logoHtml}
+  <div class="pz-shop">${shopN}</div>
+  <div style="font-size:11px;">${SHOP.addr} ${SHOP.tel ? 'Tel:' + SHOP.tel : ''}</div>
+</div>
+<div class="pz-d"></div>
+<div style="display:flex; justify-content:space-between; font-size:12px;">
+  <span>Date: ${ds}</span><span>Inv: ${sale?.invNo || '—'}</span>
+</div>
+<div class="pz-d"></div>
+${inv.map(l => {
+  const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
+  return `<div style="font-weight:bold; font-size:13px;">${nm}</div>
+          <div style="display:flex; justify-content:space-between; font-size:12px;">
+            <span>${l.w.toFixed(3)}kg x ${fmt(l.item.price)}</span><span>${fmt(l.tot)}</span>
+          </div>`;
 }).join('')}
-<div class="d"></div>
-<div class="tot"><span>TOTAL</span><span>Rs.${fmt(gt)}</span></div>
-<div class="d"></div>
-<div class="sm" style="margin-top:4px">Thank you..!</div>
-</div>`;
+<div class="pz-tot"><span>TOTAL</span><span>Rs.${fmt(gt)}</span></div>
+<div style="text-align:center; margin-top:10px; font-size:11px;">Thank You! ආයිත් එන්න!</div>`;
 }
 
-
-/* ══ ESC/POS DATA — paper size + logo ══ */
+function actualPrint(){
+  buildPzone();
+  // මෙතන අර Image loading await එක අයින් කරන්න, එයින් තමයි පින්ට් එක හිර වෙන්නේ.
+  if(pDev && pDev.gatt?.connected && pChar){
+    btPrint().catch(() => window.print());
+  }
+  else if(pPort && pWriter){
+    serialPrint().catch(() => window.print());
+  }
+  else {
+    window.print();
+  }
+}
+/* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Commands) ══ */
 function buildPrintData(){
-  const E=0x1B,G=0x1D;
-  const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
-  const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
-  const is80=(CFG.paper||'58')==='80';
-  const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
-  const foot='Thank you..!';
+  const E = 0x1B, G = 0x1D;
+  const sale = SALES[SALES.length - 1];
+  const invNo = sale?.invNo || '—';
+  const cust = document.getElementById('cust').value.trim();
+  const gt = inv.reduce((s, l) => s + l.tot, 0);
+  const is80 = (CFG.paper || '58') === '80';
+  const shopN = is80 ? (SHOP.sin || SHOP.eng || 'Shop') : (SHOP.eng || si2rom(SHOP.sin) || 'Shop');
+  const enc = new TextEncoder();
 
-  // UTF-8 code page for 80mm (if printer supports)
-  const cpSet=is80?[E,0x74,0x00]:[E,0x74,0x00]; // PC437
-
-  const enc=new TextEncoder();
-  const chunks=[
-    new Uint8Array([E,0x40]),                          // init
-    new Uint8Array(cpSet),                              // code page
-    // Logo bitmap (simplified — if SHOP.logo exists, attempt GS v 0)
-    ...logoEscPos(),
-    new Uint8Array([E,0x61,1]),                         // center
-    enc.encode(shopN+'\n'),
-    SHOP.eng&&is80?enc.encode(SHOP.eng+'\n'):null,
-    SHOP.addr?enc.encode(SHOP.addr+'\n'):null,
-    SHOP.tel?enc.encode('Tel:'+SHOP.tel+'\n'):null,
-    enc.encode('================================\n'),
-    new Uint8Array([E,0x61,0]),
-    enc.encode('Invoice:'+invNo+' '+new Date().toLocaleDateString('en-GB')+'\n'),
-    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+(curCustPh?' '+curCustPh:'')+'\n'):null,
+  const chunks = [
+    new Uint8Array([E, 0x40]),                          // Reset
+    new Uint8Array([E, 0x61, 1]),                       // Center
+    ...logoEscPos(),                                   // Logo
+    new Uint8Array([G, 0x21, 0x11]),                    // Shop Name: Large & Bold
+    enc.encode(shopN + '\n'),
+    new Uint8Array([G, 0x21, 0x00]),                    // Normal Size
+    SHOP.addr ? enc.encode(SHOP.addr + '\n') : null,
+    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
     enc.encode('--------------------------------\n'),
-    ...inv.map(l=>{
-      const nm=is80?l.item.sin:(l.item.eng||si2rom(l.item.sin));
-      return enc.encode(`${nm}\n  ${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\n`);
+    new Uint8Array([E, 0x61, 0]),                       // Left
+    enc.encode('Inv: ' + invNo + '  Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
+    cust && cust !== 'Anonymous' ? enc.encode('Cust: ' + cust + '\n') : null,
+    enc.encode('--------------------------------\n'),
+    ...inv.map(l => {
+      const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
+      return enc.encode(`${nm}\n  ${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
     }),
-    enc.encode('================================\n'),
-    new Uint8Array([G,0x21,0x11]),
-    enc.encode('Total: Rs.'+fmt(gt)+'\n'),
-    new Uint8Array([G,0x21,0]),enc.encode('\n'),
-    new Uint8Array([E,0x61,1]),
-    enc.encode(foot+'\n\n\n'),
-    new Uint8Array([G,0x56,0x41,0x10]),
+    enc.encode('--------------------------------\n'),
+    new Uint8Array([E, 0x61, 1]),                       // Center
+    new Uint8Array([G, 0x21, 0x01]),                    // TOTAL: Double Width (Bold) but Normal Height
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),
+    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
+    enc.encode('\nThank You! ආයිත් එන්න!\n\n\n'),
+    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
   ];
   return chunks.filter(Boolean);
 }
 
+/* ══ ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
 function logoEscPos(){
-  // Convert logo to 1-bit bitmap for ESC/POS
-  // Only attempt if logo exists and canvas available
-  if(!SHOP.logo)return[];
-  try{
-    const img=new Image();img.src=SHOP.logo;
-    const is80=(CFG.paper||'58')==='80';
-    const maxW=is80?384:240;const maxH=80;
-    const cv=document.createElement('canvas');
-    const aspect=img.naturalWidth/img.naturalHeight||1;
-    cv.width=Math.min(maxW,Math.round(maxH*aspect));
-    cv.height=Math.min(maxH,Math.round(maxW/aspect));
-    const ctx=cv.getContext('2d');
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.drawImage(img,0,0,cv.width,cv.height);
-    const pw=Math.ceil(cv.width/8);const ph=cv.height;
-    const data=ctx.getImageData(0,0,cv.width,cv.height).data;
-    const bits=[];
-    for(let y=0;y<ph;y++){
-      for(let bx=0;bx<pw;bx++){
-        let byte=0;
-        for(let b=0;b<8;b++){
-          const x=bx*8+b;
-          if(x<cv.width){
-            const i=(y*cv.width+x)*4;
-            const gray=(data[i]*0.299+data[i+1]*0.587+data[i+2]*0.114);
-            if(gray<128)byte|=(0x80>>b);
-          }
+  if(!SHOP.logo) return [];
+  try {
+    const img = new Image();
+    img.src = SHOP.logo;
+    const is80 = (CFG.paper || '58') === '80';
+    
+    // ප්‍රින්ටරයට ආරක්ෂිත පළල (Safe Width)
+    const maxW = is80 ? 384 : 240;
+    const maxH = 150; 
+
+    const cv = document.createElement('canvas');
+    const aspect = img.naturalWidth / img.naturalHeight || 1;
+    
+    let w = maxW;
+    let h = Math.round(maxW / aspect);
+    if (h > maxH) { h = maxH; w = Math.round(maxH * aspect); }
+    
+    cv.width = Math.ceil(w / 8) * 8; 
+    cv.height = h;
+    
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.drawImage(img, (cv.width - w) / 2, 0, w, h);
+    
+    const pw = cv.width / 8;
+    const ph = cv.height;
+    const data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+    const bits = [];
+    
+    for (let y = 0; y < ph; y++) {
+      for (let bx = 0; bx < pw; bx++) {
+        let byte = 0;
+        for (let b = 0; b < 8; b++) {
+          const x = bx * 8 + b;
+          const i = (y * cv.width + x) * 4;
+          const gray = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
+          if (gray < 128) byte |= (0x80 >> b);
         }
         bits.push(byte);
       }
     }
-    const cmd=new Uint8Array(8+bits.length);
-    // GS v 0: [1D 76 30 00 pw_l pw_h ph_l ph_h ...data]
-    cmd[0]=0x1D;cmd[1]=0x76;cmd[2]=0x30;cmd[3]=0x00;
-    cmd[4]=pw&0xff;cmd[5]=(pw>>8)&0xff;
-    cmd[6]=ph&0xff;cmd[7]=(ph>>8)&0xff;
-    bits.forEach((b,i)=>cmd[8+i]=b);
-    return[cmd,new Uint8Array([0x0A])]; // print + LF
-  }catch(e){return[];}
+    
+    const cmd = new Uint8Array(8 + bits.length);
+    cmd[0] = 0x1D; cmd[1] = 0x76; cmd[2] = 0x30; cmd[3] = 0x00;
+    cmd[4] = pw & 0xff; cmd[5] = (pw >> 8) & 0xff;
+    cmd[6] = ph & 0xff; cmd[7] = (ph >> 8) & 0xff;
+    bits.forEach((b, i) => cmd[8 + i] = b);
+    return [cmd, new Uint8Array([0x0A])];
+  } catch (e) { return []; }
 }
-
-async function btPrint(){const chunks=buildPrintData();for(const c of chunks){try{if(pChar.properties.writeWithoutResponse)await pChar.writeValueWithoutResponse(c);else await pChar.writeValue(c);}catch(e){}await new Promise(r=>setTimeout(r,40));}}
-async function serialPrint(){const chunks=buildPrintData();for(const c of chunks){try{await pWriter.write(c);}catch(e){}await new Promise(r=>setTimeout(r,20));}}
-
 /* ══ BT SCALE ══ */
 async function conScaleBT(){if(!navigator.bluetooth){toast('❌ Chrome/HTTPS','err');return;}try{toast('🔵 Scale BT...','');sDev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['0000ffe0-0000-1000-8000-00805f9b34fb','0000fff0-0000-1000-8000-00805f9b34fb','49535343-fe7d-4ae5-8fa9-9fafd205e455']});const sv=await sDev.gatt.connect();sDev.addEventListener('gattserverdisconnected',()=>{setScBT(false);
       // Auto reconnect
@@ -1175,7 +1183,7 @@ function buildXLSX(arr,sn){
     xlRow([xlCell('Grand Total (රු.)','String','TL'),xlCell(total,'Number','T')]),
   ];
   const dataRows=[xlRow(hdr.map(h=>xlCell(h,'String','H')),18)];
-  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items.length,'Number',e),xlCell(s.gt,'Number',g)],14));});
+  arr.forEach((s,si)=>{const e=si%2===0?'E':'O';const g=si%2===0?'EG':'OG';dataRows.push(xlRow([xlCell(si+1,'Number',e),xlCell(s.invNo||'—','String',e),xlCell(new Date(s.date).toLocaleString('si-LK'),'String',e),xlCell(s.cust,'String',e),xlCell(s.custPhone||'','String',e),xlCell(s.items ? s.items.length : 0),xlCell(s.gt,'Number',g)],14));});
   dataRows.push(xlRow([xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('','String','TL'),xlCell('TOTAL','String','TL'),xlCell(total,'Number','T')]));
   const itemHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
   const itemRows=[xlRow(itemHdr.map(h=>xlCell(h,'String','H')),18)];
@@ -1215,130 +1223,39 @@ function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s===
 function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
 function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
 function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
-function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
+function restoreData(inp){
+  if(!inp.files[0])return;
+  const rd=new FileReader();
+  rd.onload=e=>{
+    try{
+      const raw=e.target.result;
+      let data;
+      try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}
+      if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}
+      if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;
+      if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}
+      if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}
+      if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}
+      if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}
+      if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}
+      ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');
+    }catch(err){toast('❌ '+err.message,'err');}
+  };
+  rd.readAsText(inp.files[0],'UTF-8');
+  inp.value='';
+}
 
 /* ══ UTILS ══ */
 function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
 let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 window.addEventListener('resize',rGrid);
-
 /* ══ XLSX Export — SheetJS ══ */
 function exDay(){
-  const td=new Date().toDateString(),d=SALES.filter(s=>new Date(s.date).toDateString()===td);
-  if(!d.length){toast('❌ No data','err');return;}
-  exportXLSX(d,'Daily_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
+  const td = new Date().toDateString();
+  const d = SALES.filter(s => new Date(s.date).toDateString() === td);
+  if(!d.length){ toast('❌ දත්ත නොමැත','err'); return; }
+  exportXLSX(d, 'Daily_Sales_' + new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
 }
-function exMonth(){
-  const m=new Date().getMonth()+'-'+new Date().getFullYear();
-  const d=SALES.filter(s=>{const dt=new Date(s.date);return(dt.getMonth()+'-'+dt.getFullYear())===m;});
-  if(!d.length){toast('❌ No data','err');return;}
-  exportXLSX(d,'Monthly_'+new Date().toLocaleString('en',{month:'long'})+'_'+new Date().getFullYear());
-}
-function exAll(){
-  if(!SALES.length){toast('❌ No data','err');return;}
-  exportXLSX(SALES,'AllSales_'+new Date().toLocaleDateString('en-GB').replace(/\//g,'-'));
-}
-
-function exportXLSX(arr, fname){
-  if(typeof XLSX==='undefined'){toast('❌ XLSX library load error','err');return;}
-  const wb=XLSX.utils.book_new();
-
-  // ── Sheet 1: Sales ─────────────────────────────
-  const salesHdr=['#','Invoice No','දිනය','ගනු','Phone','Items','Total (රු.)'];
-  const salesData=arr.map((s,i)=>[
-    i+1, s.invNo||'—',
-    new Date(s.date).toLocaleString('si-LK'),
-    s.cust, s.custPhone||'',
-    s.items.length,
-    s.gt
-  ]);
-  const totalRow=['','','','','','TOTAL', arr.reduce((s,x)=>s+x.gt,0)];
-  const ws1=XLSX.utils.aoa_to_sheet([salesHdr,...salesData,totalRow]);
-  // Column widths
-  ws1['!cols']=[{wch:4},{wch:12},{wch:20},{wch:18},{wch:14},{wch:7},{wch:14}];
-  // Style header row (bold bg)
-  const range1=XLSX.utils.decode_range(ws1['!ref']);
-  for(let c=range1.s.c;c<=range1.e.c;c++){
-    const cell=ws1[XLSX.utils.encode_cell({r:0,c})];
-    if(cell){cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'8B3A0F'}},alignment:{horizontal:'center'}};}
-  }
-  // Total row bold
-  const lastR=salesData.length+1;
-  for(let c=0;c<=6;c++){
-    const cell=ws1[XLSX.utils.encode_cell({r:lastR,c})];
-    if(cell){cell.s={font:{bold:true},fill:{fgColor:{rgb:'FFE0C8'}}};}
-  }
-  XLSX.utils.book_append_sheet(wb,ws1,'Sales');
-
-  // ── Sheet 2: Item Details ──────────────────────
-  const itmHdr=['Invoice No','දිනය','ගනු','Item (SI)','Item (EN)','Weight kg','Price රු./kg','Total රු.'];
-  const itmData=[];
-  arr.forEach(s=>s.items.forEach(it=>itmData.push([
-    s.invNo||'—',
-    new Date(s.date).toLocaleDateString('si-LK'),
-    s.cust, it.name,
-    it.eng||si2rom(it.name)||'',
-    it.w, it.price, it.tot
-  ])));
-  const ws2=XLSX.utils.aoa_to_sheet([itmHdr,...itmData]);
-  ws2['!cols']=[{wch:12},{wch:16},{wch:18},{wch:20},{wch:16},{wch:10},{wch:12},{wch:13}];
-  const range2=XLSX.utils.decode_range(ws2['!ref']);
-  for(let c=range2.s.c;c<=range2.e.c;c++){
-    const cell=ws2[XLSX.utils.encode_cell({r:0,c})];
-    if(cell){cell.s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'8B3A0F'}}};}
-  }
-  XLSX.utils.book_append_sheet(wb,ws2,'Item Details');
-
-  // ── Sheet 3: Summary ───────────────────────────
-  const total=arr.reduce((s,x)=>s+x.gt,0);
-  const smryData=[
-    ['කඩ නම', SHOP.sin||''],
-    ['Shop', SHOP.eng||''],
-    ['Address', SHOP.addr||''],
-    ['Phone', SHOP.tel||''],
-    ['Version','v'+APP_VER],
-    ['Export Date', new Date().toLocaleString('si-LK')],
-    ['Total Records', arr.length],
-    ['Grand Total (රු.)', total],
-  ];
-  const ws3=XLSX.utils.aoa_to_sheet(smryData);
-  ws3['!cols']=[{wch:20},{wch:30}];
-  XLSX.utils.book_append_sheet(wb,ws3,'Summary');
-
-  // ── Download ───────────────────────────────────
-  XLSX.writeFile(wb, fname+'.xlsx');
-  toast('✅ XLSX saved','ok');
-}
-
-/* ══ BACKUP — IndexedDB persist ══ */
-async function restoreBackupHandle(){
-  if(!CFG.autoBackup)return;
-  try{
-    const h=await idbGet('bkH');
-    if(h&&h.queryPermission){const p=await h.queryPermission({mode:'readwrite'});if(p==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File remembered: '+h.name;return;}const r=await h.requestPermission({mode:'readwrite'});if(r==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;return;}}
-    const dh=await idbGet('bkD');
-    if(dh&&dh.queryPermission){const p=await dh.queryPermission({mode:'readwrite'});if(p==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}const r=await dh.requestPermission({mode:'readwrite'});if(r==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}}
-  }catch(e){console.log('Handle restore:',e);}
-}
-function updBkBar(){const dot=document.getElementById('bkDot');const txt=document.getElementById('bkTxt');if(!bkupHandle&&!bkupDir&&!CFG.autoBackup){dot.className='bk-dot';txt.textContent='Backup: Setup නොවිණි';}else if(bkupHandle||bkupDir){dot.className='bk-dot ok';txt.textContent='Auto Backup: ✅ Ready';}else{dot.className='bk-dot';txt.textContent='Auto Backup: On (Folder නොමැත)';}}
-async function setupBkupFolder(){
-  if(window.showSaveFilePicker){
-    try{const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');const h=await window.showSaveFilePicker({suggestedName:sn+'_backup.json',types:[{description:'JSON',accept:{'application/json':['.json']}}],startIn:'downloads'});bkupHandle=h;await idbPut('bkH',h);updBkBar();toast('✅ Backup file set','ok');document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;await doWriteBackup();}catch(e){if(e.name!=='AbortError')toast('❌ '+e.message,'err');}
-  } else if(window.showDirectoryPicker){
-    try{let dir=await window.showDirectoryPicker({mode:'readwrite',startIn:'downloads'});const sn=(SHOP.sin||'POS').replace(/[^\w\u0D80-\u0DFF]/g,'_');try{dir=await dir.getDirectoryHandle(sn,{create:true});}catch(e){}bkupDir=dir;await idbPut('bkD',dir);updBkBar();toast('✅ Folder set','ok');document.getElementById('bkFolderStatus').textContent='✅ Folder set';await doWriteBackup();}catch(e){toast('❌ '+e.message,'err');}
-  } else{toast('⚠️ Manual backup use කරන්න','err');}
-}
-async function doWriteBackup(){
-  const json=getAllDataJSON();
-  if(bkupHandle){try{const w=await bkupHandle.createWritable();await w.write(json);await w.close();setBkBar('ok','✅ Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Bkup:',e);}}
-  else if(bkupDir){try{const fh=await bkupDir.getFileHandle('pos_backup.json',{create:true});const w=await fh.createWritable();await w.write(json);await w.close();try{const dd=await bkupDir.getDirectoryHandle('daily',{create:true});const df=await dd.getFileHandle('bk_'+new Date().toISOString().slice(0,10)+'.json',{create:true});const dw=await df.createWritable();await dw.write(json);await dw.close();}catch(e){}setBkBar('ok','✅ Auto Backup: '+new Date().toLocaleTimeString('si-LK'));}catch(e){console.log('Dir bkup:',e);}}
-}
-function setBkBar(s,m){document.getElementById('bkDot').className='bk-dot'+(s==='ok'?' ok':s==='saving'?' saving':'');document.getElementById('bkTxt').textContent=m;}
-function triggerAutoBackup(){if(!CFG.autoBackup)return;if(!bkupHandle&&!bkupDir)return;setBkBar('saving','Saving...');clearTimeout(bkupTimer);bkupTimer=setTimeout(()=>doWriteBackup(),1200);}
-function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{type:'application/json;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);const sn=(SHOP.sin||'Shop').replace(/[^\w\u0D80-\u0DFF]/g,'_');a.download=sn+'_backup_'+new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-')+'.json';a.click();URL.revokeObjectURL(a.href);toast('✅ Backup downloaded','ok');}
-function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
-function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
-
 
 
 </script>
