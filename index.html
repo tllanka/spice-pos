@@ -1339,10 +1339,7 @@ function manualBackup(){const json=getAllDataJSON();const blob=new Blob([json],{
 function getAllDataJSON(){return JSON.stringify({_ver:5,_appVer:APP_VER,_app:'SpicePOS',_date:new Date().toISOString(),_shop:SHOP.sin||'Shop',ITEMS,SALES,CUSTS,SHOP,CFG},null,2);}
 function restoreData(inp){if(!inp.files[0])return;const rd=new FileReader();rd.onload=e=>{try{const raw=e.target.result;let data;try{data=JSON.parse(raw);}catch(pe){toast('❌ JSON error','err');return;}if(!Array.isArray(data.ITEMS)&&!Array.isArray(data.SALES)&&!data.SHOP){toast('❌ Invalid backup','err');return;}if(!confirm(`Restore?\nItems:${(data.ITEMS||[]).length} Sales:${(data.SALES||[]).length}\n⚠️ Current data overwrite!`))return;if(Array.isArray(data.ITEMS)){ITEMS=data.ITEMS;localStorage.setItem('I',JSON.stringify(ITEMS));}if(Array.isArray(data.SALES)){SALES=data.SALES;localStorage.setItem('S',JSON.stringify(SALES));}if(Array.isArray(data.CUSTS)){CUSTS=data.CUSTS;localStorage.setItem('C',JSON.stringify(CUSTS));}if(data.SHOP){SHOP={...SHOP,...data.SHOP};localStorage.setItem('H',JSON.stringify(SHOP));}if(data.CFG){CFG={...CFG,...data.CFG};localStorage.setItem('G',JSON.stringify(CFG));}ldShop();ldCFG();updHdr();updBanner();rGrid();rItmTbl();rCustTbl();updRep();rSalTbl();updBkBar();toast('✅ Restored!','ok');}catch(err){toast('❌ '+err.message,'err');}};rd.readAsText(inp.files[0],'UTF-8');inp.value='';}
 
-/* ══ UTILS ══ */
-function fmt(n){return parseFloat(n||0).toLocaleString('en-LK',{minimumFractionDigits:2,maximumFractionDigits:2});}
-let _t;function toast(msg,type){const t=document.getElementById('tst');t.textContent=msg;t.className='tst show'+(type?' '+type:'');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
-window.addEventListener('resize',rGrid);
+
 
 </script>
 </body>
