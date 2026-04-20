@@ -1089,18 +1089,18 @@ function buildPrintData() {
     }),
     enc.encode('--------------------------------\r\n'),
     
-    // --- TOTAL (මෙතනයි වැදගත්ම කොටස) ---
-    new Uint8Array([E, 0x61, 1]),                       // මැදට (Center)
+    // --- TOTAL ---
+    new Uint8Array([E, 0x61, 1]),                       // Center
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt)),                // වචන ටික මුද්‍රණය කළා
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\r\n'),       // <--- මෙතනට \r\n එකතු කළා
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // *** පේළි වෙන් කිරීමට බල කරන (Force Feed) Command එක ***
-    new Uint8Array([E, 0x64, 2]),                       // පේළි 2ක් අනිවාර්යයෙන්ම පහළට තල්ලු කරන්න (ESC d 2)
+    // පේළි වෙන් කිරීමට (Force Feed)
+    new Uint8Array([E, 0x64, 2]),                       // පේළි 2ක් පහළට
     
     // --- THANK YOU ---
-    new Uint8Array([E, 0x61, 1]),                       // නැවත මැදට (Center)
-    enc.encode('THANK YOU'),                            // වචන ටික මුද්‍රණය කළා
+    new Uint8Array([E, 0x61, 1]),                       
+    enc.encode('THANK YOU\r\n'),                        // <--- මෙතනටත් \r\n එකතු කිරීම වඩාත් සුදුසුයි
     
     // අවසාන වශයෙන් පේළි 5ක් තල්ලු කර කඩදාසිය නවත්වන්න
     new Uint8Array([E, 0x64, 5]),                       
