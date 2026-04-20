@@ -950,85 +950,90 @@ function triggerSMSOpen(phone){
   }
 }
 
-/* ══ PRINT ZONE — paper size aware, logo, Sinhala ══ */
+/* ══ 1. පද්ධතියෙන් පෙන්වන ප්‍රිවීව් එක (PDF/Browser Print) ══ */
 function buildPzone(){
   const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
   const ds=new Date(sale?.date||Date.now()).toLocaleDateString('en-GB');
   const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
   const paper=CFG.paper||'58';
   const is80=paper==='80';
-  // Names: 80mm try Sinhala, 58mm use English/Roman
+
   const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
   const foot='Thank you..!';
-  const pw=is80?'80mm':'58mm';
 
-  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?65:52}px;max-width:${is80?160:130}px;display:block;margin:0 auto 5px;filter:grayscale(1) contrast(1.4)">`:'';
+  // ලෝගෝව මැදට කර ප්‍රමාණය මඳක් වැඩි කරන ලදී
+  const logoHtml=SHOP.logo?`<img src="${SHOP.logo}" style="max-height:${is80?80:65}px; width:auto; display:block; margin:0 auto 5px; filter:grayscale(1) contrast(1.4)">`:'';
 
   document.getElementById('pzone').innerHTML=`
 <style>
-@page{size:${is80?'80mm':'58mm'} auto;margin:0}
-#pzone{font-family:'Courier New',monospace;font-size:${is80?12:10}px;width:${is80?72:50}mm;margin:0;padding:4px}
-.pz-c{text-align:center}.pz-b{font-weight:bold}.pz-d{border-top:1px dashed #333;margin:4px 0}
-.pz-r{display:flex;justify-content:space-between}
-.pz-tot{display:flex;justify-content:space-between;font-weight:900;font-size:${is80?13:11}px;padding:3px 0}
-.pz-f{text-align:center;margin-top:6px;font-size:${is80?11:9}px}
+@page{size:${is80?'80mm':'58mm'} auto; margin:0}
+#pzone{font-family:'Courier New',monospace; font-size:${is80?12:10}px; width:${is80?72:50}mm; margin:0 auto; padding:4px; color:black;}
+.pz-c{text-align:center; width:100%;}
+/* කඩේ නම විශාල කර Bold කරන ලදී */
+.pz-shop{font-size:${is80?22:18}px; font-weight:bold; text-transform:uppercase; margin-bottom:2px;}
+.pz-d{border-top:1px dashed #333; margin:4px 0}
+.pz-r{display:flex; justify-content:space-between}
+/* Total එක උසින් අඩු කර Bold (මහත) කරන ලදී */
+.pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:${is80?18:15}px; padding:4px 0; border-top:1px solid black; border-bottom:1px solid black; margin-top:5px;}
+.pz-f{text-align:center; margin-top:8px; font-size:${is80?11:9}px}
 </style>
-<div class="pz-c">${logoHtml}<div class="pz-b" style="font-size:${is80?14:12}px">${shopN}</div>
+<div class="pz-c">
+  ${logoHtml}
+  <div class="pz-shop">${shopN}</div>
   ${SHOP.eng&&is80?`<div>${SHOP.eng}</div>`:''}
   ${SHOP.addr?`<div>${SHOP.addr}</div>`:''}
-  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}</div>
+  ${SHOP.tel?`<div>Tel:${SHOP.tel}</div>`:''}
+</div>
 <div class="pz-d"></div>
 <div class="pz-r"><span>Invoice:</span><span>${invNo}</span></div>
 <div class="pz-r"><span>Date:</span><span>${ds}</span></div>
 ${cust&&cust!=='Anonymous'?`<div class="pz-r"><span>Customer:</span><span>${cust}</span></div>`:''}
 ${curCustPh?`<div class="pz-r"><span>Phone:</span><span>${curCustPh}</span></div>`:''}
 <div class="pz-d"></div>
-${inv.map(l=>{const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):( l.item.eng||si2rom(l.item.sin));return`<div class="pz-b">${nm}</div><div class="pz-r"><span>${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`}).join('')}
+${inv.map(l=>{const nm=is80?(l.item.sin+(l.item.eng?` (${l.item.eng})`:'')):( l.item.eng||si2rom(l.item.sin));return`<div style="font-weight:bold">${nm}</div><div class="pz-r"><span>${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)}</span><span>Rs.${fmt(l.tot)}</span></div>`}).join('')}
 <div class="pz-d"></div>
 <div class="pz-tot"><span>TOTAL</span><span>Rs.${fmt(gt)}</span></div>
 <div class="pz-d"></div>
 <div class="pz-f">${foot}</div>`;
 }
 
-/* ══ ESC/POS DATA — paper size + logo ══ */
+/* ══ 2. තාප මුද්‍රණ යන්ත්‍රය (Thermal Printer) සඳහා Commands ══ */
 function buildPrintData(){
-  const E=0x1B,G=0x1D;
+  const E=0x1B, G=0x1D;
   const sale=SALES[SALES.length-1];const invNo=sale?.invNo||'—';
   const cust=document.getElementById('cust').value.trim();const gt=inv.reduce((s,l)=>s+l.tot,0);
   const is80=(CFG.paper||'58')==='80';
   const shopN=is80?(SHOP.sin||SHOP.eng||'Shop'):(SHOP.eng||si2rom(SHOP.sin)||'Shop');
   const foot='Thank you..!';
 
-  // UTF-8 code page for 80mm (if printer supports)
-  const cpSet=is80?[E,0x74,0x00]:[E,0x74,0x00]; // PC437
-
   const enc=new TextEncoder();
   const chunks=[
-    new Uint8Array([E,0x40]),                          // init
-    new Uint8Array(cpSet),                              // code page
-    // Logo bitmap (simplified — if SHOP.logo exists, attempt GS v 0)
-    ...logoEscPos(),
-    new Uint8Array([E,0x61,1]),                         // center
+    new Uint8Array([E,0x40]),                          // Init
+    new Uint8Array([E,0x61,1]),                         // Center align
+    ...logoEscPos(),                                   // Logo (Centered automatically)
+    new Uint8Array([G,0x21,0x11]),                      // කඩේ නම: Double height + Double width
     enc.encode(shopN+'\n'),
+    new Uint8Array([G,0x21,0x00]),                      // Normal size reset
     SHOP.eng&&is80?enc.encode(SHOP.eng+'\n'):null,
     SHOP.addr?enc.encode(SHOP.addr+'\n'):null,
     SHOP.tel?enc.encode('Tel:'+SHOP.tel+'\n'):null,
     enc.encode('================================\n'),
-    new Uint8Array([E,0x61,0]),
+    new Uint8Array([E,0x61,0]),                         // Left align
     enc.encode('Invoice:'+invNo+' '+new Date().toLocaleDateString('en-GB')+'\n'),
-    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+(curCustPh?' '+curCustPh:'')+'\n'):null,
+    cust&&cust!=='Anonymous'?enc.encode('Customer:'+cust+'\n'):null,
     enc.encode('--------------------------------\n'),
     ...inv.map(l=>{
       const nm=is80?l.item.sin:(l.item.eng||si2rom(l.item.sin));
       return enc.encode(`${nm}\n  ${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\n`);
     }),
     enc.encode('================================\n'),
-    new Uint8Array([G,0x21,0x11]),
+    new Uint8Array([E,0x61,1]),                         // Center align
+    new Uint8Array([G,0x21,0x01]),                      // TOTAL: Double WIDTH පමණි (උස පොඩියි, මහත වැඩියි)
     enc.encode('Total: Rs.'+fmt(gt)+'\n'),
-    new Uint8Array([G,0x21,0]),enc.encode('\n'),
-    new Uint8Array([E,0x61,1]),
+    new Uint8Array([G,0x21,0]),                         // Reset size
+    enc.encode('\n'),
     enc.encode(foot+'\n\n\n'),
-    new Uint8Array([G,0x56,0x41,0x10]),
+    new Uint8Array([G,0x56,0x41,0x10]),                 // Cut
   ];
   return chunks.filter(Boolean);
 }
