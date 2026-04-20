@@ -977,37 +977,43 @@ function buildPzone(){
 
   document.getElementById('pzone').innerHTML = `
 <style>
-@page{size:${is80 ? '80mm' : '58mm'} auto; margin:0;}
-#pzone{font-family:'Courier New',monospace; width:${is80 ? '72mm' : '50mm'}; margin:0 auto; padding:5px; color:black; background:white;}
-.pz-c{text-align:center;}
-.pz-shop{font-size:20px; font-weight:bold; text-transform:uppercase; margin-bottom:4px;}
-.pz-d{border-top:1px dashed #000; margin:5px 0;}
-.pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:15px; padding:3px 0; border-top:1px solid #000; border-bottom:1px solid #000; margin-top:5px;}
+@media print {
+  @page { size: ${is80 ? '80mm' : '58mm'} auto; margin: 0; }
+  body { margin: 0; padding: 0; }
+  #pzone { display: block !important; width: ${is80 ? '72mm' : '48mm'}; margin: 0 auto; padding: 5px; color: black; background: white; }
+}
+#pzone { font-family: 'Courier New', monospace; color: black; }
+.pz-c { text-align: center; width: 100%; }
+.pz-shop { font-size: 22px; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; line-height: 1.1; }
+.pz-d { border-top: 1px dashed #000; margin: 5px 0; }
+.pz-tot { display: flex; justify-content: space-between; font-weight: 900; font-size: 16px; padding: 4px 0; border-top: 1px solid #000; border-bottom: 1px solid #000; margin-top: 5px; }
+.pz-row { display: flex; justify-content: space-between; font-size: 13px; margin: 2px 0; }
 </style>
 <div class="pz-c">
   ${logoHtml}
   <div class="pz-shop">${shopN}</div>
-  <div style="font-size:11px;">${SHOP.addr} ${SHOP.tel ? 'Tel:' + SHOP.tel : ''}</div>
+  <div style="font-size:12px;">${SHOP.addr} ${SHOP.tel ? '<br>Tel:' + SHOP.tel : ''}</div>
 </div>
 <div class="pz-d"></div>
-<div style="display:flex; justify-content:space-between; font-size:12px;">
+<div class="pz-row">
   <span>Date: ${ds}</span><span>Inv: ${sale?.invNo || '—'}</span>
 </div>
 <div class="pz-d"></div>
 ${inv.map(l => {
   const nm = is80 ? l.item.sin : (l.item.eng || si2rom(l.item.sin));
-  return `<div style="font-weight:bold; font-size:13px;">${nm}</div>
-          <div style="display:flex; justify-content:space-between; font-size:12px;">
+  return `<div style="font-weight:bold; font-size:14px;">${nm}</div>
+          <div class="pz-row">
             <span>${l.w.toFixed(3)}kg x ${fmt(l.item.price)}</span><span>${fmt(l.tot)}</span>
           </div>`;
 }).join('')}
 <div class="pz-tot"><span>TOTAL</span><span>Rs.${fmt(gt)}</span></div>
-<div style="text-align:center; margin-top:10px; font-size:11px;">Thank You! ආයිත් එන්න!</div>`;
+<div style="text-align:center; margin-top:10px; font-size:12px;">Thank You! ආයිත් එන්න!</div>`;
 }
 
 function actualPrint(){
-  buildPzone();
-  // මෙතන අර Image loading await එක අයින් කරන්න, එයින් තමයි පින්ට් එක හිර වෙන්නේ.
+  buildPzone(); // මුලින්ම pzone එක අලුත් කරනවා
+  
+  // Bluetooth හෝ USB Printer එකක් සම්බන්ධ නම් කෙලින්ම ඒකට යවනවා
   if(pDev && pDev.gatt?.connected && pChar){
     btPrint().catch(() => window.print());
   }
@@ -1015,7 +1021,8 @@ function actualPrint(){
     serialPrint().catch(() => window.print());
   }
   else {
-    window.print();
+    // නැතිනම් සාමාන්‍ය බ්‍රවුසර් ප්‍රින්ට් එක දෙනවා
+    setTimeout(() => { window.print(); }, 500); 
   }
 }
 /* ══ 2. ප්‍රින්ටරයට යවන දත්ත (Commands) ══ */
