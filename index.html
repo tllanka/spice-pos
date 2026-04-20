@@ -903,6 +903,53 @@ function newInv(){resetInv();gp('pos');toast('✅ නව Invoice','ok');}
 /* ══ PRINT PREVIEW ══ */
 function showPrintPreview(){document.getElementById('pmdoc').innerHTML=buildInvHTML();document.getElementById('pmInfo').style.display='none';document.getElementById('pmovl').classList.add('show');}
 function closePrintPreview(){document.getElementById('pmovl').classList.remove('show');}
+  /* ══ Bluetooth හරහා දත්ත යැවීම ══ */
+async function btPrint() {
+  if (!pChar) return;
+  const data = buildPrintData();
+  for (const chunk of data) {
+    // Bluetooth MTU සීමාව නිසා දත්ත කොටස් (Chunks) වශයෙන් යැවිය යුතුය
+    await pChar.writeValue(chunk);
+  }
+  toast('✅ Bluetooth මුද්‍රණය නිමයි', 'ok');
+}
+
+/* ══ USB/Serial හරහා දත්ත යැවීම ══ */
+async function serialPrint() {
+  if (!pWriter) return;
+  const data = buildPrintData();
+  for (const chunk of data) {
+    await pWriter.write(chunk);
+  }
+  toast('✅ USB මුද්‍රණය නිමයි', 'ok');
+}
+
+/* ══ නිවැරදි කරන ලද actualPrint Function එක ══ */
+async function actualPrint() {
+  buildPzone(); // Browser එකේ preview එක හදන්න
+  
+  try {
+    // 1. Bluetooth සම්බන්ධ වී ඇත්නම්
+    if (pDev && pDev.gatt?.connected && pChar) {
+      toast('🔵 Bluetooth හරහා මුද්‍රණය වේ...', '');
+      await btPrint();
+    } 
+    // 2. USB/Serial සම්බන්ධ වී ඇත්නම්
+    else if (pPort && pWriter) {
+      toast('🟣 USB හරහා මුද්‍රණය වේ...', '');
+      await serialPrint();
+    } 
+    // 3. කිසිවක් නැත්නම් Browser print එක පෙන්වන්න
+    else {
+      window.print();
+    }
+  } catch (e) {
+    console.error("Print Error:", e);
+    toast('❌ මුද්‍රණ දෝෂයකි: ' + e.message, 'err');
+    // Error එකක් ආවොත් සාමාන්‍ය විදිහට Print එක ගන්න උත්සාහ කරන්න
+    window.print();
+  }
+}
 /* ══ මුද්‍රණය ආරම්භ කරන ප්‍රධාන Function එක (Async එකතු කර ඇත) ══ */
 async function actualPrint(){
   buildPzone();
