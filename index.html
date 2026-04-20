@@ -903,11 +903,26 @@ function newInv(){resetInv();gp('pos');toast('✅ නව Invoice','ok');}
 /* ══ PRINT PREVIEW ══ */
 function showPrintPreview(){document.getElementById('pmdoc').innerHTML=buildInvHTML();document.getElementById('pmInfo').style.display='none';document.getElementById('pmovl').classList.add('show');}
 function closePrintPreview(){document.getElementById('pmovl').classList.remove('show');}
-function actualPrint(){
+/* ══ මුද්‍රණය ආරම්භ කරන ප්‍රධාන Function එක (Async එකතු කර ඇත) ══ */
+async function actualPrint(){
   buildPzone();
-  if(pDev&&pDev.gatt?.connected&&pChar){btPrint().catch(()=>window.print());}
-  else if(pPort&&pWriter){serialPrint().catch(()=>window.print());}
-  else window.print();
+  
+  // ලෝගෝව පින්තූරයක් ලෙස කියවන තෙක් සුළු මොහොතක් රැඳී සිටීම
+  if(SHOP.logo) {
+    const img = new Image();
+    img.src = SHOP.logo;
+    await new Promise(res => { img.onload = res; img.onerror = res; });
+  }
+
+  if(pDev && pDev.gatt?.connected && pChar){
+    btPrint().catch(() => window.print());
+  }
+  else if(pPort && pWriter){
+    serialPrint().catch(() => window.print());
+  }
+  else {
+    window.print();
+  }
 }
 
 /* ══ SMS OPEN (opens app with pre-filled message) ══ */
@@ -966,9 +981,11 @@ function buildPzone(){
 @page{size:${is80 ? '80mm' : '58mm'} auto; margin:0;}
 #pzone{font-family:'Courier New',monospace; width:${is80 ? '72mm' : '50mm'}; margin:0 auto; padding:5px; color:black; background:white;}
 .pz-c{text-align:center;}
-.pz-shop{font-size:20px; font-weight:bold; text-transform:uppercase;}
+/* කඩේ නම විශාල කරන ලදී */
+.pz-shop{font-size:24px; font-weight:bold; text-transform:uppercase; margin-bottom:4px;}
 .pz-d{border-top:1px dashed #000; margin:5px 0;}
-.pz-tot{display:flex; justify-content:space-between; font-weight:bold; font-size:16px; padding:4px 0; border-top:1px solid #000; border-bottom:1px solid #000; margin-top:5px;}
+/* Total එක උසින් අඩු කර මහත් (Bold) කරන ලදී */
+.pz-tot{display:flex; justify-content:space-between; font-weight:900; font-size:15px; padding:3px 0; border-top:1px solid #000; border-bottom:1px solid #000; margin-top:5px; line-height:1.2;}
 </style>
 <div class="pz-c">
   ${logoHtml}
@@ -1031,7 +1048,7 @@ function buildPrintData(){
   return chunks.filter(Boolean);
 }
 
-/* ══ 1. ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
+/* ══ ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
 function logoEscPos(){
   if(!SHOP.logo) return [];
   try {
@@ -1039,8 +1056,7 @@ function logoEscPos(){
     img.src = SHOP.logo;
     const is80 = (CFG.paper || '58') === '80';
     
-    // ප්‍රින්ටරයට දරාගත හැකි උපරිම ආරක්ෂිත පළල (Safe Width)
-    // 58mm සඳහා 240px | 80mm සඳහා 384px
+    // ප්‍රින්ටරයට ආරක්ෂිත පළල (Safe Width)
     const maxW = is80 ? 384 : 240;
     const maxH = 150; 
 
@@ -1051,7 +1067,7 @@ function logoEscPos(){
     let h = Math.round(maxW / aspect);
     if (h > maxH) { h = maxH; w = Math.round(maxH * aspect); }
     
-    cv.width = Math.ceil(w / 8) * 8; // Width must be multiple of 8
+    cv.width = Math.ceil(w / 8) * 8; 
     cv.height = h;
     
     const ctx = cv.getContext('2d');
