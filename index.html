@@ -1099,11 +1099,9 @@ function buildPrintData() {
     new Uint8Array([0x0A]),                             // පේළියක් පනින්න
     
     // --- THANK YOU (සරලව) ---
-    new Uint8Array([E, 0x61, 1]),                       // නැවත මැදට ගෙන එන්න
-    enc.encode('THANK YOU'),                            // තිත් ලකුණු රහිතව සරලව
-    new Uint8Array([0x0A, 0x0A, 0x0A, 0x0A]),           // පේළි 4ක් පනින්න
-    
-    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           // කඩදාසිය තල්ලු කරන්න
+    new Uint8Array([G, 0x21, 0x00]),                    // Reset Size
+    enc.encode('\nThank You!\n\n\n'),
+    new Uint8Array([G, 0x56, 0x41, 0x10]),               // Cut Paper
   ];
   
   return chunks.filter(Boolean);
