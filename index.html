@@ -1065,7 +1065,7 @@ function buildPrintData() {
   const shopN = SHOP.eng || si2rom(SHOP.sin) || 'SPICE SHOP';
 
   const chunks = [
-    new Uint8Array([E, 0x40]),                          // Printer එක මුල සිට (Reset)
+    new Uint8Array([E, 0x40]),                          // Reset Printer
     
     // --- Header ---
     new Uint8Array([E, 0x61, 1]),                       // Center
@@ -1090,21 +1090,14 @@ function buildPrintData() {
     enc.encode('--------------------------------\r\n'),
     
     // --- TOTAL ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
+    new Uint8Array([E, 0x61, 1]),                       // Center (මැදට)
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\r\n'),       // <--- මෙතනට \r\n එකතු කළා
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\r\n'),        // Total පේළිය සහ අලුත් පේළියක්
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // පේළි වෙන් කිරීමට (Force Feed)
-    new Uint8Array([E, 0x64, 2]),                       // පේළි 2ක් පහළට
-    
-    // --- THANK YOU ---
-    new Uint8Array([E, 0x61, 1]),                       
-    enc.encode('THANK YOU\r\n'),                        // <--- මෙතනටත් \r\n එකතු කිරීම වඩාත් සුදුසුයි
-    
-    // අවසාන වශයෙන් පේළි 5ක් තල්ලු කර කඩදාසිය නවත්වන්න
-    new Uint8Array([E, 0x64, 5]),                       
-    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           
+    // අවසාන වශයෙන් පේළි 6ක් තල්ලු කර කඩදාසිය කපා දමන්න
+    new Uint8Array([E, 0x64, 6]),                       // Feed 6 lines
+    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),           // Cut paper
   ];
   
   return chunks.filter(Boolean);
