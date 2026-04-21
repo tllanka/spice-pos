@@ -1070,9 +1070,14 @@ function buildPrintData() {
     // --- Header ---
     new Uint8Array([E, 0x61, 1]),                       // Center
     ...logoEscPos(),                                   
+    
+    // Shop Name (මෙහිදී උස පමණක් වැඩි කර ඇත)
+    new Uint8Array([0x1B, 0x21, 0x10]),                 // Double Height ON
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
     enc.encode(shopN + '\n'),
+    new Uint8Array([0x1B, 0x21, 0x00]),                 // Font Size Reset to Normal
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
+    
     SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\n') : null,
     SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
     enc.encode('--------------------------------\n'),
@@ -1089,19 +1094,19 @@ function buildPrintData() {
     }),
     enc.encode('--------------------------------\n'),
     
-    // --- TOTAL (සාමාන්‍ය උස, නමුත් තද අකුරු) ---
+    // --- TOTAL ---
     new Uint8Array([E, 0x61, 1]),                       // Center
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),         // සාමාන්‍ය උසින් Bold කර මුද්‍රණය වේ
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),         // \n එකක් පමණක් දමා ඇත
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // --- Thank You ---
-    enc.encode('--------------------------------\n'),  // TOTAL එකට යටින් ඉරක්
+    // --- Separator and Thank You ---
+    enc.encode('--------------------------------\n'),  // TOTAL එකට යටින් ඉර
     enc.encode('Thank You ...!\n'),                    // සාමාන්‍ය අකුරින්
     
-    // අවසාන වශයෙන් පේළි 6ක් තල්ලු කර කඩදාසිය කපන්න
-    new Uint8Array([E, 0x64, 2]),                       
-    new Uint8Array([0x1D, 0x56, 0x42, 0x00]),           
+    // අවසාන වශයෙන් පේළි 2ක් පමණක් තල්ලු කරන්න
+    new Uint8Array([E, 0x64, 2]),                       // Line feed reduced to 2
+    new Uint8Array([0x1D, 0x56, 0x42, 0x00]),           // Paper Cut
   ];
   
   return chunks.filter(Boolean);
