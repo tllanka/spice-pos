@@ -1070,40 +1070,34 @@ function buildPrintData() {
     // --- Header ---
     new Uint8Array([E, 0x61, 1]),                       // Center
     ...logoEscPos(),                                   
-    
-    // Shop Name (උස සහ පළල දෙකම වැඩියි - Double Height + Width)
-    new Uint8Array([0x1B, 0x21, 0x30]),                 
-    enc.encode(shopN + '\r\n'),
-    new Uint8Array([0x1B, 0x21, 0x00]),                 // Reset to Normal
-    
-    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\r\n') : null,
-    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\r\n') : null,
-    enc.encode('--------------------------------\r\n'),
+    new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
+    enc.encode(shopN + '\n'),
+    new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
+    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\n') : null,
+    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
+    enc.encode('--------------------------------\n'),
     
     // --- Items ---
     new Uint8Array([E, 0x61, 0]),                       // Left Align
-    enc.encode('Inv: ' + (sale?.invNo || '—') + '\r\n'),
-    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\r\n'),
-    enc.encode('--------------------------------\r\n'),
+    enc.encode('Inv: ' + (sale?.invNo || '—') + '\n'),
+    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
+    enc.encode('--------------------------------\n'),
     
     ...inv.map(l => {
       const nm = l.item.eng || si2rom(l.item.sin);
-      return enc.encode(`${nm}\r\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\r\n`);
+      return enc.encode(`${nm}\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
     }),
-    enc.encode('--------------------------------\r\n'),
+    enc.encode('--------------------------------\n'),
     
-    // --- TOTAL ---
+    // --- TOTAL (සාමාන්‍ය උස, නමුත් තද අකුරු) ---
     new Uint8Array([E, 0x61, 1]),                       // Center
     new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\r\n'),        // පේළිය අවසන් බව තහවුරු කරන්න
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),         // සාමාන්‍ය උසින් Bold කර මුද්‍රණය වේ
     new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
     
-    // පේළිය පල්ලෙහාට තල්ලු කිරීමට බල කරන විධානය (Merge වීම වැළැක්වීමට)
-    new Uint8Array([E, 0x64, 1]),                       
-    
     // --- Thank You ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
-    enc.encode('Thank You ...!\r\n'),                  
+    enc.encode('--------------------------------\n'),  // TOTAL එකට යටින් ඉරක්
+    enc.encode('Thank You ...!\n'),                    // සාමාන්‍ය අකුරින්
     
     // අවසාන පේළි 2 සහ කඩදාසිය කැපීම
     new Uint8Array([E, 0x64, 2]),                       
