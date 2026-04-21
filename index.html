@@ -1061,49 +1061,53 @@ function buildPrintData() {
   const sale = SALES[SALES.length - 1];
   const gt = inv.reduce((s, l) => s + l.tot, 0);
   const enc = new TextEncoder();
-
   const shopN = SHOP.eng || si2rom(SHOP.sin) || 'SPICE SHOP';
 
   const chunks = [
-    new Uint8Array([E, 0x40]),                          // Reset Printer
-    
+    new Uint8Array([E, 0x40]),
+
     // --- Header ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
-    ...logoEscPos(),                                   
-    new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode(shopN + '\n'),
-    new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
-    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\n') : null,
-    SHOP.tel ? enc.encode('Tel:' + SHOP.tel + '\n') : null,
-    enc.encode('--------------------------------\n'),
-    
+    new Uint8Array([E, 0x61, 1]),                    // Center
+    ...logoEscPos(),
+    new Uint8Array([E, 0x45, 0x01]),                 // Bold ON
+    enc.encode(shopN + '\r\n'),
+    new Uint8Array([E, 0x45, 0x00]),                 // Bold OFF
+    SHOP.addr ? enc.encode(si2rom(SHOP.addr) + '\r\n') : null,
+    SHOP.tel  ? enc.encode('Tel:' + SHOP.tel + '\r\n') : null,
+    enc.encode('--------------------------------\r\n'),
+
+    // --- Invoice Info ---
+    new Uint8Array([E, 0x61, 0]),                    // Left
+    enc.encode('Inv:  ' + (sale?.invNo || '—') + '\r\n'),
+    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\r\n'),
+    enc.encode('--------------------------------\r\n'),
+
     // --- Items ---
-    new Uint8Array([E, 0x61, 0]),                       // Left Align
-    enc.encode('Inv: ' + (sale?.invNo || '—') + '\n'),
-    enc.encode('Date: ' + new Date().toLocaleDateString('en-GB') + '\n'),
-    enc.encode('--------------------------------\n'),
-    
     ...inv.map(l => {
       const nm = l.item.eng || si2rom(l.item.sin);
-      return enc.encode(`${nm}\n${l.w.toFixed(3)}kg x ${fmt(l.item.price)} = ${fmt(l.tot)}\n`);
+      return enc.encode(
+        `${nm}\r\n  ${l.w.toFixed(2)}kg x Rs.${fmt(l.item.price)} = Rs.${fmt(l.tot)}\r\n`
+      );
     }),
-    enc.encode('--------------------------------\n'),
-    
-    // --- TOTAL (සාමාන්‍ය උස, නමුත් තද අකුරු) ---
-    new Uint8Array([E, 0x61, 1]),                       // Center
-    new Uint8Array([E, 0x45, 0x01]),                    // Bold ON
-    enc.encode('TOTAL: Rs.' + fmt(gt) + '\n'),         // සාමාන්‍ය උසින් Bold කර මුද්‍රණය වේ
-    new Uint8Array([E, 0x45, 0x00]),                    // Bold OFF
-    
-    // --- Thank You ---
-    enc.encode('--------------------------------\n'),  // TOTAL එකට යටින් ඉරක්
-    enc.encode('Thank You ...!\n'),                    // සාමාන්‍ය අකුරින්
-    
-    // අවසාන වශයෙන් පේළි 6ක් තල්ලු කර කඩදාසිය කපන්න
-    new Uint8Array([E, 0x64, 2]),                       
-    new Uint8Array([0x1D, 0x56, 0x42, 0x00]),           
+    enc.encode('================================\r\n'),
+
+    // --- TOTAL ---
+    new Uint8Array([E, 0x61, 1]),                    // Center
+    new Uint8Array([E, 0x45, 0x01]),                 // Bold ON
+    enc.encode('TOTAL: Rs.' + fmt(gt) + '\r\n'),     // ✅ \r\n add කළා
+    new Uint8Array([E, 0x45, 0x00]),                 // Bold OFF
+    enc.encode('================================\r\n'),
+
+    // --- Feed + Thank You ---
+    new Uint8Array([E, 0x64, 1]),                    // 1 line feed
+    new Uint8Array([E, 0x61, 1]),                    // Center
+    enc.encode('THANK YOU\r\n'),
+
+    // --- Cut ---
+    new Uint8Array([E, 0x64, 5]),
+    new Uint8Array([0x1D, 0x56, 0x41, 0x03]),
   ];
-  
+
   return chunks.filter(Boolean);
 }
 /* ══ ලෝගෝව ප්‍රින්ටරයට ගැලපෙන සේ සැකසීම ══ */
