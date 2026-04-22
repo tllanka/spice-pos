@@ -1243,13 +1243,18 @@ function exAll(){if(!SALES.length){toast('❌ No data','err');return;}dlXLSX(bui
 
 /* ══ BACKUP — IndexedDB persist ══ */
 async function restoreBackupHandle(){
-  if(!CFG.autoBackup)return;
-  try{
-    const h=await idbGet('bkH');
-    if(h&&h.queryPermission){const p=await h.queryPermission({mode:'readwrite'});if(p==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File remembered: '+h.name;return;}const r=await h.requestPermission({mode:'readwrite'});if(r==='granted'){bkupHandle=h;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ File: '+h.name;return;}}
-    const dh=await idbGet('bkD');
-    if(dh&&dh.queryPermission){const p=await dh.queryPermission({mode:'readwrite'});if(p==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}const r=await dh.requestPermission({mode:'readwrite'});if(r==='granted'){bkupDir=dh;updBkBar();document.getElementById('bkFolderStatus').textContent='✅ Folder remembered';return;}}
-  }catch(e){console.log('Handle restore:',e);}
+  if(!CFG.autoBackup) return;
+  try {
+    const h = await idbGet('bkH');
+    const dh = await idbGet('bkD');
+    if(h) bkupHandle = h;
+    else if(dh) bkupDir = dh;
+    
+    if(bkupHandle || bkupDir) {
+      // පරණ handle එකක් තියෙනවා නම් බාහිරින් පෙන්වන්න
+      updBkBar(); 
+    }
+  } catch(e) { console.log('Restore Error', e); }
 }
 function updBkBar(){const dot=document.getElementById('bkDot');const txt=document.getElementById('bkTxt');if(!bkupHandle&&!bkupDir&&!CFG.autoBackup){dot.className='bk-dot';txt.textContent='Backup: Setup නොවිණි';}else if(bkupHandle||bkupDir){dot.className='bk-dot ok';txt.textContent='Auto Backup: ✅ Ready';}else{dot.className='bk-dot';txt.textContent='Auto Backup: On (Folder නොමැත)';}}
 async function setupBkupFolder(){
@@ -1343,6 +1348,22 @@ function exportXLSX(arr, fname) {
 
 // ══ EVENT LISTENERS ══
 window.addEventListener('resize', rGrid);
+
+  // App එක ඇතුලේ කොහේ හරි කරන පලවෙනි click එකෙන් permission එක ගමු
+window.addEventListener('click', async () => {
+  if (CFG.autoBackup && (bkupHandle || bkupDir)) {
+    const handle = bkupHandle || bkupDir;
+    try {
+      const status = await handle.queryPermission({mode: 'readwrite'});
+      if (status !== 'granted') {
+        // බ්‍රවුසරයෙන් අවසර ඉල්ලනවා - මෙය click එකක් නිසා වැඩ කරයි
+        await handle.requestPermission({mode: 'readwrite'});
+        updBkBar();
+        doWriteBackup(); 
+      }
+    } catch (e) { console.log("Silent permission failed", e); }
+  }
+}, { once: true }); // මෙය එක පාරක් පමණක් ක්‍රියාත්මක වේ
 </script>
 </body>
 </html>
